@@ -6,7 +6,7 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import db, facts, views
+from . import db, facts, reports, views
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -32,6 +32,28 @@ def route(conn, path, query):
     return 404, {"error": "Route inconnue"}
 
 
+MAX_BODY = 4096
+
+
+def route_post(conn, path, raw):
+    """Renvoie (code HTTP, objet JSON) pour une écriture. `raw` est le corps reçu."""
+    if path != "/api/report":
+        return 404, {"error": "Route inconnue"}
+    try:
+        body = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return 400, {"error": "Le signalement doit être envoyé en JSON."}
+    if not isinstance(body, dict):
+        return 400, {"error": "Le signalement doit être un objet JSON."}
+    try:
+        return 201, reports.add_report(
+            conn, body.get("fact_id"), body.get("message"), body.get("about"))
+    except reports.ReportError as exc:
+        return 400, {"error": str(exc)}
+    except KeyError as exc:
+        return 404, {"error": str(exc.args[0])}
+
+
 def make_handler(db_path):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -49,6 +71,28 @@ def make_handler(db_path):
                     self._send(200, fh.read(), "text/html; charset=utf-8")
             else:
                 self._send(404, b"Introuvable", "text/plain; charset=utf-8")
+
+        def do_POST(self):
+            url = urlparse(self.path)
+            try:
+                length = int(self.headers.get("Content-Length") or "")
+            except ValueError:
+                length = -1
+            if length < 0:
+                code, body = 411, {"error": "Longueur du message absente."}
+            elif length > MAX_BODY:
+                code, body = 413, {"error": "Message trop long."}
+            else:
+                raw = self.rfile.read(length)
+                conn = db.init(db.connect(db_path))
+                try:
+                    code, body = route_post(conn, url.path, raw)
+                finally:
+                    conn.close()
+            if code >= 400:
+                self.close_connection = True
+            self._send(code, json.dumps(body, ensure_ascii=False).encode("utf-8"),
+                       "application/json; charset=utf-8")
 
         def _send(self, code, payload, content_type):
             self.send_response(code)

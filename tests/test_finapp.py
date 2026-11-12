@@ -1,10 +1,16 @@
+import contextlib
+import io
 import json
 import os
 import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.request
+from http.server import ThreadingHTTPServer
 
-from finapp import api, calc, charts, db, facts, health, promises, sec, seed, views
-from finapp.__main__ import export_demo
+from finapp import api, calc, charts, db, facts, health, promises, reports, sec, seed, views
+from finapp.__main__ import export_demo, main
 
 
 def fresh():
@@ -595,6 +601,182 @@ class ChartInView(unittest.TestCase):
         self.assertIn("drawChart", html)
         self.assertIn("Voir les mêmes chiffres en tableau", html)
         self.assertNotIn("<script src", html)
+
+
+class ErrorReports(unittest.TestCase):
+    """Signalement d'erreur (01-donnees.md, section 8) : fait visé, message, date."""
+
+    def setUp(self):
+        self.conn = fresh()
+        seed.seed(self.conn)
+        self.fact_id = views.company_view(self.conn, "NVDA")["revenue"][-1]["id"]
+
+    def post(self, body):
+        raw = body if isinstance(body, bytes) else json.dumps(body).encode("utf-8")
+        return api.route_post(self.conn, "/api/report", raw)
+
+    def test_report_is_stored_with_fact_message_and_date(self):
+        r = reports.add_report(self.conn, self.fact_id, "  Chiffre différent du communiqué.  ",
+                               "Chiffre d'affaires, T2", now="2026-11-12T10:00:00Z")
+        self.assertEqual((r["fact_id"], r["created_at"], r["status"]),
+                         (self.fact_id, "2026-11-12T10:00:00Z", "ouvert"))
+        row = reports.list_reports(self.conn)[0]
+        self.assertEqual(row["message"], "Chiffre différent du communiqué.")
+        self.assertEqual(row["about"], "Chiffre d'affaires, T2")
+        self.assertEqual((row["ticker"], row["metric"]), ("NVDA", "revenue"))
+        self.assertTrue(row["source_url"].startswith("https://"))
+
+    def test_date_is_set_when_not_given(self):
+        r = reports.add_report(self.conn, self.fact_id, "Erreur ?")
+        self.assertRegex(r["created_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+    def test_a_report_never_changes_the_fact(self):
+        before = views.company_view(self.conn, "NVDA")
+        reports.add_report(self.conn, self.fact_id, "La valeur devrait être 1.")
+        self.assertEqual(views.company_view(self.conn, "NVDA"), before)
+
+    def test_empty_or_too_long_message_is_refused(self):
+        for bad in ("", "   ", None, 12, "x" * 1001):
+            with self.assertRaises(reports.ReportError):
+                reports.add_report(self.conn, self.fact_id, bad)
+        reports.add_report(self.conn, self.fact_id, "x" * 1000)
+
+    def test_bad_fact_reference_is_refused(self):
+        for bad in ("1", None, 1.5, True):
+            with self.assertRaises(reports.ReportError):
+                reports.add_report(self.conn, bad, "Erreur")
+        with self.assertRaises(KeyError):
+            reports.add_report(self.conn, 999999, "Erreur")
+
+    def test_about_is_cut_and_optional(self):
+        reports.add_report(self.conn, self.fact_id, "Erreur", "t" * 500)
+        self.assertEqual(len(reports.list_reports(self.conn)[0]["about"]), 200)
+        with self.assertRaises(reports.ReportError):
+            reports.add_report(self.conn, self.fact_id, "Erreur", 42)
+
+    def test_message_is_stored_as_text_with_parameters(self):
+        nasty = "'); DROP TABLE facts; -- <script>alert(1)</script>"
+        reports.add_report(self.conn, self.fact_id, nasty)
+        self.assertEqual(reports.list_reports(self.conn)[0]["message"], nasty)
+        self.assertTrue(views.company_view(self.conn, "NVDA")["revenue"])
+
+    def test_list_is_newest_first_and_filters_by_status(self):
+        reports.add_report(self.conn, self.fact_id, "premier", now="2026-11-01T00:00:00Z")
+        reports.add_report(self.conn, self.fact_id, "second", now="2026-11-02T00:00:00Z")
+        self.assertEqual([r["message"] for r in reports.list_reports(self.conn)], ["second", "premier"])
+        self.assertEqual(len(reports.list_reports(self.conn, "ouvert")), 2)
+        self.assertEqual(reports.list_reports(self.conn, "traité"), [])
+
+    def test_api_route(self):
+        code, body = self.post({"fact_id": self.fact_id, "message": "Erreur ?", "about": "CA"})
+        self.assertEqual((code, body["fact_id"], body["status"]), (201, self.fact_id, "ouvert"))
+        self.assertEqual(len(reports.list_reports(self.conn)), 1)
+
+    def test_api_refusals(self):
+        self.assertEqual(self.post({"fact_id": self.fact_id, "message": " "})[0], 400)
+        self.assertEqual(self.post({"message": "sans chiffre"})[0], 400)
+        self.assertEqual(self.post({"fact_id": 999999, "message": "inconnu"})[0], 404)
+        self.assertEqual(self.post(b"pas du json")[0], 400)
+        self.assertEqual(self.post(b"\xff\xfe")[0], 400)
+        self.assertEqual(self.post([1, 2])[0], 400)
+        self.assertEqual(api.route_post(self.conn, "/api/autre", b"{}")[0], 404)
+        self.assertEqual(reports.list_reports(self.conn), [])
+
+    def test_error_messages_are_in_plain_french(self):
+        self.assertEqual(self.post({"fact_id": self.fact_id, "message": ""})[1]["error"],
+                         "Le message est vide.")
+
+    def test_fact_carries_the_publication_date_of_its_document(self):
+        f = views.company_view(self.conn, "NVDA")["revenue"][-1]
+        self.assertEqual(f["source"]["published_at"], "2026-08-26")
+
+    def test_quarter_growth_carries_the_previous_quarter(self):
+        rev = views.company_view(self.conn, "NVDA")["revenue"]
+        self.assertIsNone(rev[0]["previous"])
+        self.assertEqual(rev[2]["previous"]["id"], rev[1]["id"])
+        self.assertEqual(rev[2]["growth"]["input_fact_ids"], [rev[2]["id"], rev[1]["id"]])
+
+    def test_demo_page_says_reporting_is_not_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "demo.html")
+            export_demo(self.conn, out)
+            with open(out, encoding="utf-8") as fh:
+                html = fh.read()
+        self.assertIn("Signaler une erreur", html)
+        self.assertIn("pas disponible dans cette page de démonstration", html)
+
+
+class ReportOverHttp(unittest.TestCase):
+    """Le vrai chemin réseau, sur un serveur local lancé pour le test."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db_path = os.path.join(self.tmp.name, "t.db")
+        conn = db.init(db.connect(self.db_path))
+        seed.seed(conn)
+        self.fact_id = views.company_view(conn, "NVDA")["revenue"][0]["id"]
+        conn.close()
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), api.make_handler(self.db_path))
+        self.thread = threading.Thread(target=self.server.serve_forever)
+        self.thread.start()
+        self.url = "http://127.0.0.1:%d/api/report" % self.server.server_address[1]
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join()
+        self.tmp.cleanup()
+
+    def send(self, raw):
+        req = urllib.request.Request(self.url, data=raw, method="POST",
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return resp.status, json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            with exc:
+                return exc.code, json.loads(exc.read().decode("utf-8"))
+
+    def stored(self):
+        conn = db.connect(self.db_path)
+        try:
+            return reports.list_reports(conn)
+        finally:
+            conn.close()
+
+    def test_post_stores_the_report(self):
+        code, body = self.send(json.dumps(
+            {"fact_id": self.fact_id, "message": "Écart avec le communiqué."}).encode("utf-8"))
+        self.assertEqual(code, 201)
+        self.assertEqual(self.stored()[0]["message"], "Écart avec le communiqué.")
+
+    def test_too_long_body_is_refused_without_being_stored(self):
+        code, body = self.send(json.dumps(
+            {"fact_id": self.fact_id, "message": "x" * 5000}).encode("utf-8"))
+        self.assertEqual(code, 413)
+        self.assertEqual(self.stored(), [])
+
+    def test_bad_request_gets_a_clear_answer(self):
+        code, body = self.send(b"{}")
+        self.assertEqual(code, 400)
+        self.assertIn("error", body)
+
+    def test_command_lists_reports(self):
+        self.send(json.dumps({"fact_id": self.fact_id, "message": "À vérifier.",
+                              "about": "Chiffre d'affaires"}).encode("utf-8"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            main(["--db", self.db_path, "reports"])
+        text = out.getvalue()
+        self.assertIn("NVDA revenue", text)
+        self.assertIn("À vérifier.", text)
+        self.assertIn("https://", text)
+
+    def test_command_with_no_report(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            main(["--db", self.db_path, "reports"])
+        self.assertEqual(out.getvalue().strip(), "Aucun signalement.")
 
 
 class MarginCalc(unittest.TestCase):

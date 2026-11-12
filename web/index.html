@@ -78,6 +78,11 @@
   .sheet dd { margin: 2px 0 0; word-wrap: break-word; overflow-wrap: break-word; }
   .sheet a { color: var(--accent); }
   .sheet .close { margin-top: 18px; width: 100%; padding: 11px; font: inherit; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); cursor: pointer; }
+  #sheet-report { margin-top: 16px; }
+  #sheet-report label { display: block; font-size: 14px; margin-bottom: 4px; }
+  #sheet-report textarea { display: block; width: 100%; font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; }
+  button.report { min-height: 44px; padding: 10px 14px; font: inherit; border: 1px solid var(--accent); border-radius: 10px; background: var(--card); color: var(--accent); cursor: pointer; }
+  button.report[disabled] { opacity: 0.6; }
   @media (min-width: 700px) { .sheet-bg { align-items: center; } .sheet { border-radius: 16px; } }
   @media (max-width: 480px) { .big { font-size: 34px; } .title h1 { font-size: 22px; } }
   .hide { display: none !important; }
@@ -107,6 +112,7 @@
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <h3 id="sheet-title"></h3>
     <dl id="sheet-body"></dl>
+    <div id="sheet-report"></div>
     <button type="button" class="close" id="sheet-close">Fermer</button>
   </div>
 </div>
@@ -146,24 +152,37 @@ window.__DATA__ = /*__DATA__*/null;
     return el('button', { type: 'button', 'class': 'num', text: label,
       onclick: function () { openSheet(info); } });
   }
+  /* Valeur exacte, sans arrondi, avec son unité : « 68 100 000 000 USD ». */
+  function exact(f) {
+    var parts = String(Math.abs(f.value)).split('.');
+    var whole = parts[0].replace(/\B(?=(\d{3})+$)/g, '\u00a0');
+    return (f.value < 0 ? '−' : '') + whole + (parts[1] ? ',' + parts[1] : '') + ' ' + f.unit;
+  }
   function factInfo(f, title) {
-    return { title: title, rows: [
+    return { title: title, factId: f.id, rows: [
       ['Valeur', money(f.value) + (f.is_sample ? ' (exemple arrondi)' : '')],
+      ['Valeur exacte', exact(f)],
       ['Période', (f.period_start ? 'du ' + day(f.period_start) + ' ' : '') + 'au ' + day(f.period_end)],
+      ['Document publié le', f.source.published_at ? day(f.source.published_at) : 'date non précisée'],
       ['Connu depuis le', day(f.known_at)],
       ['Source', f.source]
     ] };
   }
-  function growthInfo(g, title) {
-    return { title: title, rows: [
-      ['Résultat', pct(g.value)],
-      ['Calcul', g.formula],
+  function growthInfo(f) {
+    var p = f.previous;
+    return { title: 'Variation sur un trimestre, ' + f.fiscal_label, factId: f.id, rows: [
+      ['Résultat', pct(f.growth.value)],
+      ['Calcul', f.growth.formula],
+      ['Ce trimestre', money(f.value) + (f.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(f.known_at)],
+      ['Source de ce trimestre', f.source],
+      ['Trimestre précédent', money(p.value) + (p.is_sample ? ' (exemple)' : '') + ', du ' + day(p.period_start) + ' au ' + day(p.period_end) + ', connu depuis le ' + day(p.known_at)],
+      ['Source du trimestre précédent', p.source],
       ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
     ] };
   }
   function quarterYearInfo(f) {
     var p = f.year_ago;
-    return { title: 'Variation sur un an, ' + f.fiscal_label, rows: [
+    return { title: 'Variation sur un an, ' + f.fiscal_label, factId: f.id, rows: [
       ['Résultat', pct(f.growth_year.value)],
       ['Calcul', f.growth_year.formula],
       ['Ce trimestre', money(f.value) + (f.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(f.known_at)],
@@ -175,7 +194,7 @@ window.__DATA__ = /*__DATA__*/null;
   }
   function yearGrowthInfo(f) {
     var p = f.previous;
-    return { title: 'Variation sur un an, ' + f.fiscal_label, rows: [
+    return { title: 'Variation sur un an, ' + f.fiscal_label, factId: f.id, rows: [
       ['Résultat', pct(f.growth.value)],
       ['Calcul', f.growth.formula],
       ['Cet exercice', money(f.value) + (f.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(f.known_at)],
@@ -189,7 +208,7 @@ window.__DATA__ = /*__DATA__*/null;
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
   function marginInfo(m, line) {
     var n = m.numerator, rev = line.revenue;
-    return { title: cap(m.name) + ', ' + line.fiscal_label, rows: [
+    return { title: cap(m.name) + ', ' + line.fiscal_label, factId: n.id, rows: [
       ['Résultat', pct0(m.result.value)],
       ['Calcul', m.result.formula],
       [METRIC_NAMES[n.metric] || n.metric, money(n.value) + (n.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(n.known_at)],
@@ -207,7 +226,7 @@ window.__DATA__ = /*__DATA__*/null;
   function healthInfo(h) {
     if (h.key === 'growth') {
       return h.basis === 'year' ? quarterYearInfo(h.current)
-        : growthInfo(h.result, 'Variation sur un trimestre, ' + h.current.fiscal_label);
+        : growthInfo(h.current);
     }
     if (h.key === 'profitability') { return marginInfo(h.line.net, h.line); }
     var rows = [
@@ -339,7 +358,7 @@ window.__DATA__ = /*__DATA__*/null;
     ] };
   }
   function gapInfo(p) {
-    return { title: 'Écart pour ' + p.fiscal_label, rows: [
+    return { title: 'Écart pour ' + p.fiscal_label, factId: p.actual.id, rows: [
       ['Résultat', pct(p.gap_pct)],
       ['Calcul', '(' + money(p.actual.value) + ' − ' + money(p.mid) + ') ÷ ' + money(p.mid) + ' × 100'],
       ['Méthode', 'Publié comparé à la valeur centrale annoncée, calculé par du code, sans IA.']
@@ -359,8 +378,63 @@ window.__DATA__ = /*__DATA__*/null;
         ]));
       }
     });
+    if (info.factId) {
+      body.appendChild(el('dt', { text: 'Contrôles de qualité' }));
+      body.appendChild(el('dd', { text: 'Aucun contrôle automatique n\'a encore été passé sur ce chiffre.' }));
+    }
+    reportZone(info);
     document.getElementById('sheet-bg').className = 'sheet-bg open';
     document.getElementById('sheet-close').focus();
+  }
+  /* Bouton « Signaler une erreur » : envoie le chiffre visé et un message au serveur. */
+  function reportZone(info) {
+    var zone = document.getElementById('sheet-report');
+    zone.innerHTML = '';
+    if (!info.factId) { return; }
+    if (window.__DATA__) {
+      zone.appendChild(el('p', { 'class': 'note', text: 'Le signalement d\'erreur n\'est pas disponible dans cette page de démonstration.' }));
+      return;
+    }
+    zone.appendChild(el('button', { type: 'button', 'class': 'report', text: 'Signaler une erreur',
+      onclick: function () { reportForm(zone, info); } }));
+  }
+  function reportForm(zone, info) {
+    zone.innerHTML = '';
+    var area = el('textarea', { id: 'report-text', rows: '3', maxlength: '1000' });
+    var status = el('p', { 'class': 'note', role: 'status' });
+    var send = el('button', { type: 'button', 'class': 'report', text: 'Envoyer le signalement' });
+    send.onclick = function () {
+      var message = area.value.replace(/^\s+|\s+$/g, '');
+      if (!message) { status.textContent = 'Écrivez d\'abord ce qui vous paraît faux.'; return; }
+      send.disabled = true;
+      status.textContent = 'Envoi…';
+      postJSON('/api/report', { fact_id: info.factId, about: info.title, message: message }, function (code, body) {
+        if (code === 201) {
+          zone.innerHTML = '';
+          zone.appendChild(el('p', { role: 'status', text: 'Merci. Signalement n° ' + body.id + ' enregistré. Une personne va le vérifier.' }));
+        } else {
+          send.disabled = false;
+          status.textContent = (body && body.error) || 'Le signalement n\'a pas pu être envoyé. Réessayez dans un instant.';
+        }
+      });
+    };
+    zone.appendChild(el('label', { 'for': 'report-text', text: 'Qu\'est-ce qui vous paraît faux ?' }));
+    zone.appendChild(area);
+    zone.appendChild(send);
+    zone.appendChild(status);
+    area.focus();
+  }
+  function postJSON(url, obj, done) {
+    var x = new XMLHttpRequest();
+    x.open('POST', url);
+    x.setRequestHeader('Content-Type', 'application/json');
+    x.onload = function () {
+      var body = null;
+      try { body = JSON.parse(x.responseText); } catch (e) { body = null; }
+      done(x.status, body);
+    };
+    x.onerror = function () { done(0, null); };
+    x.send(JSON.stringify(obj));
   }
   function closeSheet() { document.getElementById('sheet-bg').className = 'sheet-bg'; }
 
@@ -384,7 +458,7 @@ window.__DATA__ = /*__DATA__*/null;
       ];
       if (last.growth) {
         kids.push(el('p', {}, [
-          'Soit ', num(pct(last.growth.value), growthInfo(last.growth, 'Variation sur un trimestre')),
+          'Soit ', num(pct(last.growth.value), growthInfo(last)),
           ' par rapport au trimestre précédent.'
         ]));
       }
@@ -434,7 +508,7 @@ window.__DATA__ = /*__DATA__*/null;
       b1.appendChild(el('tr', {}, [
         el('td', { text: f.fiscal_label }),
         el('td', { 'class': 'r' }, [num(money(f.value), factInfo(f, 'Chiffre d\'affaires, ' + f.fiscal_label))]),
-        el('td', { 'class': 'r' }, [f.growth ? num(pct(f.growth.value), growthInfo(f.growth, 'Variation sur un trimestre')) : '—']),
+        el('td', { 'class': 'r' }, [f.growth ? num(pct(f.growth.value), growthInfo(f)) : '—']),
         f.growth_year ? el('td', { 'class': 'r' }, [num(pct(f.growth_year.value), quarterYearInfo(f))])
                       : el('td', { 'class': 'r muted', text: 'non disponible' }),
         el('td', { text: day(f.known_at) }),

@@ -141,6 +141,18 @@ window.__DATA__ = /*__DATA__*/null;
       ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
     ] };
   }
+  function quarterYearInfo(f) {
+    var p = f.year_ago;
+    return { title: 'Variation sur un an, ' + f.fiscal_label, rows: [
+      ['Résultat', pct(f.growth_year.value)],
+      ['Calcul', f.growth_year.formula],
+      ['Ce trimestre', money(f.value) + (f.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(f.known_at)],
+      ['Source de ce trimestre', f.source],
+      ['Même trimestre un an plus tôt', money(p.value) + (p.is_sample ? ' (exemple)' : '') + ', du ' + day(p.period_start) + ' au ' + day(p.period_end) + ', connu depuis le ' + day(p.known_at)],
+      ['Source du trimestre un an plus tôt', p.source],
+      ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
+    ] };
+  }
   function yearGrowthInfo(f) {
     var p = f.previous;
     return { title: 'Variation sur un an, ' + f.fiscal_label, rows: [
@@ -262,7 +274,8 @@ window.__DATA__ = /*__DATA__*/null;
   function renderPro(v, main) {
     var t1 = el('table', {}, [el('thead', {}, [el('tr', {}, [
       el('th', { text: 'Période' }), el('th', { 'class': 'r', text: 'Chiffre d\'affaires' }),
-      el('th', { 'class': 'r', text: 'Var. trimestre' }), el('th', { text: 'Connu depuis' }),
+      el('th', { 'class': 'r', text: 'Var. trimestre' }), el('th', { 'class': 'r', text: 'Var. sur un an' }),
+      el('th', { text: 'Connu depuis' }),
       el('th', { text: 'Source' })
     ])])]);
     var b1 = el('tbody');
@@ -271,12 +284,18 @@ window.__DATA__ = /*__DATA__*/null;
         el('td', { text: f.fiscal_label }),
         el('td', { 'class': 'r' }, [num(money(f.value), factInfo(f, 'Chiffre d\'affaires, ' + f.fiscal_label))]),
         el('td', { 'class': 'r' }, [f.growth ? num(pct(f.growth.value), growthInfo(f.growth, 'Variation sur un trimestre')) : '—']),
+        f.growth_year ? el('td', { 'class': 'r' }, [num(pct(f.growth_year.value), quarterYearInfo(f))])
+                      : el('td', { 'class': 'r muted', text: 'non disponible' }),
         el('td', { text: day(f.known_at) }),
         el('td', {}, [el('a', { href: f.source.url, target: '_blank', rel: 'noopener', text: f.source.title })])
       ]));
     });
     t1.appendChild(b1);
-    main.appendChild(card('Chiffre d\'affaires trimestriel', [el('div', { 'class': 'scroll' }, [t1])], true));
+    main.appendChild(card('Chiffre d\'affaires trimestriel', [
+      el('div', { 'class': 'scroll' }, [t1]),
+      el('p', { 'class': 'note', text: 'Variation sur un an : par rapport au même trimestre de l\'exercice précédent. ' +
+        '« Non disponible » : ce trimestre manque dans nos données.' })
+    ], true));
 
     var ta = el('table', {}, [el('thead', {}, [el('tr', {}, [
       el('th', { text: 'Exercice' }), el('th', { 'class': 'r', text: 'Chiffre d\'affaires' }),

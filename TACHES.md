@@ -47,7 +47,6 @@ une tâche en dépend.
 
 Référence : `02-calculs.md`, `03-ecrans.md` section 3.3.
 
-- [ ] 1.3 — Variation sur un an par trimestre (même trimestre de l'exercice précédent) et croissance annuelle moyenne sur n ans dans `calc.py`. Tests des cas limites.
 - [ ] 1.4 — Étendre `sec.TAGS` au compte de résultat complet listé dans `01-donnees.md` section 3, avec jeu d'exemple au format SEC. Tests.
 - [ ] 1.5 — Bilan : indicateurs à une date (`period_type` « instant »), lecture et affichage en mode Pro. Tests.
 - [ ] 1.6 — Flux de trésorerie : gérer les cumuls depuis le début de l'exercice et calculer le trimestre isolé par différence, avec formule et entrées. Tests.
@@ -62,6 +61,7 @@ Référence : `02-calculs.md`, `03-ecrans.md` section 3.3.
 - [ ] 1.15 — Fiche source enrichie : formule, entrées, contrôles de qualité, bouton « signaler une erreur » (stockage du signalement, route d'API, tests).
 - [ ] 1.16 — Fiche société : informations d'en-tête (bourse, pays, devise, secteur, fin d'exercice) dans le schéma et à l'écran.
 - [ ] 1.17 — Comparaison de jusqu'à cinq sociétés côte à côte en mode Pro, sur un indicateur et une période. Tests.
+- [ ] 1.18 — Afficher la croissance annuelle moyenne du chiffre d'affaires sur 3 et 5 ans en mode Pro, à partir de `calc.cagr` (déjà écrit et testé), avec sa fiche source. Tests.
 
 ## Phase 2 — Plusieurs sociétés, recherche, navigation
 
@@ -263,3 +263,4 @@ Référence : `05-creations.md` sections 4, 5 et 7, `04-ia.md` section 10.
 - [x] Vision, spécifications détaillées et plan de tâches complet dans `docs/`.
 - [x] 1.1 — Marges : ajouter au mode Pro la marge brute, la marge opérationnelle et la marge nette par trimestre, calculées par `calc.margin` ; chaque valeur ouvre sa fiche source. Tests.
 - [x] 1.2 — Vue annuelle : série annuelle du chiffre d'affaires dans `views.company_view` avec variation sur un an ; affichage en mode Pro. Tests.
+- [x] 1.3 — Variation sur un an par trimestre (même trimestre de l'exercice précédent) et croissance annuelle moyenne sur n ans dans `calc.py`. Tests des cas limites.

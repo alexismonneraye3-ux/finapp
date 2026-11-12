@@ -148,6 +148,161 @@ class Calc(unittest.TestCase):
         self.assertEqual(promises.status(9.9, None, 10, None), promises.MISSED)
 
 
+class YearOverYearCalc(unittest.TestCase):
+    """Variation sur un an et croissance annuelle moyenne (02-calculs.md, sections 2 et 10)."""
+
+    @staticmethod
+    def f(fid, value, start="", end="2026-03-31", unit="USD"):
+        return {"id": fid, "value": value, "unit": unit,
+                "period_start": start, "period_end": end}
+
+    def q(self, fid, value, start, end):
+        return self.f(fid, value, start, end)
+
+    def test_normal_case_checked_by_hand(self):
+        g = calc.year_over_year(self.f(1, 150), self.f(2, 120))
+        self.assertAlmostEqual(g["value"], 25.0)
+        self.assertEqual((g["unit"], g["name"]), ("%", "variation sur un an"))
+
+    def test_formula_and_inputs_are_returned(self):
+        g = calc.year_over_year(self.f(1, 150), self.f(2, 120))
+        self.assertEqual(g["formula"], "(150 − 120) ÷ 120 × 100")
+        self.assertEqual(g["input_fact_ids"], [1, 2])
+
+    def test_missing_input(self):
+        self.assertIsNone(calc.year_over_year(self.f(1, 150), None))
+
+    def test_division_by_zero(self):
+        self.assertIsNone(calc.year_over_year(self.f(1, 150), self.f(2, 0)))
+
+    def test_negative_base_uses_absolute_value(self):
+        """De −100 à 50 : (50 − (−100)) ÷ |−100| × 100 = +150 %."""
+        g = calc.year_over_year(self.f(1, 50), self.f(2, -100))
+        self.assertAlmostEqual(g["value"], 150.0)
+
+    def test_different_units(self):
+        self.assertIsNone(calc.year_over_year(self.f(1, 150), self.f(2, 120, unit="EUR")))
+
+    def test_finds_same_quarter_a_year_earlier(self):
+        rows = [self.q(1, 100, "2025-01-01", "2025-03-31"),
+                self.q(2, 110, "2025-04-01", "2025-06-30"),
+                self.q(3, 120, "2025-10-01", "2025-12-31"),
+                self.q(4, 130, "2026-01-01", "2026-03-31")]
+        self.assertEqual(calc.same_period_last_year(rows, rows[3])["id"], 1)
+
+    def test_no_match_when_that_quarter_is_missing(self):
+        """Jamais de comparaison avec un autre trimestre que celui d'il y a un an."""
+        rows = [self.q(2, 110, "2025-04-01", "2025-06-30"),
+                self.q(4, 130, "2026-01-01", "2026-03-31")]
+        self.assertIsNone(calc.same_period_last_year(rows, rows[1]))
+        self.assertIsNone(calc.same_period_last_year(rows, rows[0]))
+
+    def test_tolerates_52_and_53_week_years(self):
+        """Fins de trimestre décalées de quelques jours d'une année à l'autre."""
+        rows = [self.q(1, 100, "2025-01-27", "2025-04-27"),
+                self.q(2, 130, "2026-01-26", "2026-04-26")]
+        self.assertEqual(calc.same_period_last_year(rows, rows[1])["id"], 1)
+
+    def test_a_full_year_is_not_matched_with_a_quarter(self):
+        rows = [self.q(1, 400, "2024-04-01", "2025-03-31"),
+                self.q(2, 130, "2026-01-01", "2026-03-31")]
+        self.assertIsNone(calc.same_period_last_year(rows, rows[1]))
+
+    def test_instant_value_has_no_year_ago_period(self):
+        rows = [self.f(1, 100, "", "2025-03-31"), self.f(2, 130, "", "2026-03-31")]
+        self.assertIsNone(calc.same_period_last_year(rows, rows[1]))
+
+    def test_cagr_normal_case_checked_by_hand(self):
+        """De 100 à 121 en 2 ans : +10 % par an."""
+        c = calc.cagr(self.f(1, 121), self.f(2, 100), 2)
+        self.assertAlmostEqual(c["value"], 10.0)
+        self.assertEqual((c["unit"], c["name"]), ("%", "croissance annuelle moyenne"))
+
+    def test_cagr_formula_and_inputs_are_returned(self):
+        c = calc.cagr(self.f(1, 121), self.f(2, 100), 2)
+        self.assertEqual(c["formula"], "((121 ÷ 100)^(1/2) − 1) × 100")
+        self.assertEqual(c["input_fact_ids"], [1, 2])
+
+    def test_cagr_decline(self):
+        """De 100 à 25 en 2 ans : −50 % par an."""
+        self.assertAlmostEqual(calc.cagr(self.f(1, 25), self.f(2, 100), 2)["value"], -50.0)
+
+    def test_cagr_over_one_year_equals_simple_growth(self):
+        self.assertAlmostEqual(calc.cagr(self.f(1, 150), self.f(2, 120), 1)["value"], 25.0)
+
+    def test_cagr_missing_input(self):
+        self.assertIsNone(calc.cagr(None, self.f(2, 100), 2))
+        self.assertIsNone(calc.cagr(self.f(1, 121), None, 2))
+
+    def test_cagr_zero_or_negative_start_or_end(self):
+        self.assertIsNone(calc.cagr(self.f(1, 121), self.f(2, 0), 2))
+        self.assertIsNone(calc.cagr(self.f(1, 121), self.f(2, -100), 2))
+        self.assertIsNone(calc.cagr(self.f(1, -5), self.f(2, 100), 2))
+        self.assertIsNone(calc.cagr(self.f(1, 0), self.f(2, 100), 2))
+
+    def test_cagr_needs_at_least_one_year(self):
+        self.assertIsNone(calc.cagr(self.f(1, 121), self.f(2, 100), 0))
+        self.assertIsNone(calc.cagr(self.f(1, 121), self.f(2, 100), -3))
+        self.assertIsNone(calc.cagr(self.f(1, 121), self.f(2, 100), None))
+
+    def test_cagr_different_units(self):
+        self.assertIsNone(calc.cagr(self.f(1, 121), self.f(2, 100, unit="EUR"), 2))
+
+
+class YearOverYearInView(unittest.TestCase):
+    """Variation sur un an par trimestre dans la fiche. Chiffres inventés pour le test."""
+
+    QUARTERS = [("2025-01-01", "2025-03-31", 100, "2025-05-01"),
+                ("2025-04-01", "2025-06-30", 110, "2025-08-01"),
+                ("2025-07-01", "2025-09-30", 120, "2025-11-01"),
+                ("2025-10-01", "2025-12-31", 125, "2026-02-01"),
+                ("2026-01-01", "2026-03-31", 130, "2026-05-01")]
+
+    def setUp(self):
+        self.conn = fresh()
+        self.cid = facts.upsert_company(self.conn, "tst", "Test SA")
+        for start, end, value, known in self.QUARTERS:
+            s = facts.add_source(self.conn, "sec_filing", "https://ex.test/" + end, "10-Q " + end, known)
+            facts.add_fact(self.conn, self.cid, "revenue", start, end, value, "USD", s, known)
+
+    def revenue(self, as_of=None):
+        return views.company_view(self.conn, "TST", as_of)["revenue"]
+
+    def test_only_the_fifth_quarter_has_a_year_ago(self):
+        rev = self.revenue()
+        self.assertEqual([r["growth_year"] is None for r in rev], [True] * 4 + [False])
+        self.assertAlmostEqual(rev[4]["growth_year"]["value"], 30.0)
+
+    def test_quarter_on_quarter_growth_is_unchanged(self):
+        self.assertAlmostEqual(self.revenue()[4]["growth"]["value"], 4.0)
+
+    def test_carries_both_facts_and_sources(self):
+        last = self.revenue()[4]
+        self.assertEqual(last["growth_year"]["input_fact_ids"], [last["id"], last["year_ago"]["id"]])
+        self.assertEqual(last["year_ago"]["source"]["url"], "https://ex.test/2025-03-31")
+        self.assertEqual(last["year_ago"]["known_at"], "2025-05-01")
+        self.assertIsNone(self.revenue()[0]["year_ago"])
+
+    def test_as_of_uses_the_version_known_then(self):
+        """Le trimestre d'il y a un an est révisé après coup : la variation suit la date choisie."""
+        s = facts.add_source(self.conn, "sec_filing", "https://ex.test/rev", "10-Q/A")
+        facts.add_fact(self.conn, self.cid, "revenue", "2025-01-01", "2025-03-31",
+                       104, "USD", s, "2026-06-01")
+        self.assertAlmostEqual(self.revenue("2026-05-15")[4]["growth_year"]["value"], 30.0)
+        self.assertAlmostEqual(self.revenue()[4]["growth_year"]["value"], 25.0)
+
+    def test_api_and_demo_page_include_it(self):
+        body = api.route(self.conn, "/api/company/tst", {})[1]
+        self.assertAlmostEqual(body["revenue"][4]["growth_year"]["value"], 30.0)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "demo.html")
+            export_demo(self.conn, out)
+            with open(out, encoding="utf-8") as fh:
+                html = fh.read()
+        self.assertIn("Var. sur un an", html)
+        self.assertIn('"growth_year"', html)
+
+
 class MarginCalc(unittest.TestCase):
     """Cas attendus par docs/specifications/02-calculs.md, section 10."""
 
@@ -453,6 +608,11 @@ class NvidiaExample(unittest.TestCase):
                        109.0e9, "USD", s, "2026-11-19", 2027, "Q3")
         flagged = self.view()["promises"]["unusual"]
         self.assertEqual([f["fiscal_label"] for f in flagged], ["T3 exercice 2027"])
+
+    def test_no_year_over_year_with_three_quarters(self):
+        """Le jeu d'exemple n'a que trois trimestres : aucune variation sur un an."""
+        for item in self.view()["revenue"]:
+            self.assertIsNone(item["growth_year"])
 
     def test_no_annual_revenue_without_published_year(self):
         """Le jeu d'exemple n'a que des trimestres : aucun chiffre annuel inventé."""

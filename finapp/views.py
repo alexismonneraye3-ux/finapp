@@ -109,6 +109,10 @@ def company_view(conn, ticker, as_of=None):
         item["fiscal_label"] = fiscal_label(row)
         item["growth"] = (calc.growth(row, prev)
                           if prev is not None and calc.consecutive(prev, row) else None)
+        year_ago = calc.same_period_last_year(revenue_rows, row)
+        item["growth_year"] = calc.year_over_year(row, year_ago)
+        item["year_ago"] = (facts.fact_dict(year_ago)
+                            if item["growth_year"] is not None else None)
         revenue.append(item)
         prev = row
 

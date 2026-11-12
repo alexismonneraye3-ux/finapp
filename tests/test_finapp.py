@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 
-from finapp import api, calc, db, facts, promises, sec, seed, views
+from finapp import api, calc, db, facts, health, promises, sec, seed, views
 from finapp.__main__ import export_demo
 
 
@@ -301,6 +301,186 @@ class YearOverYearInView(unittest.TestCase):
                 html = fh.read()
         self.assertIn("Var. sur un an", html)
         self.assertIn('"growth_year"', html)
+
+
+class HealthSentences(unittest.TestCase):
+    """Phrases du bloc Santé (02-calculs.md, section 9). Chiffres inventés pour le test."""
+
+    @staticmethod
+    def rev(growth=None, growth_year=None):
+        g = lambda v: None if v is None else {"value": v, "formula": "f", "input_fact_ids": [1, 2]}
+        return [{"fiscal_label": "T1", "growth": g(growth), "growth_year": g(growth_year),
+                 "year_ago": {"id": 2} if growth_year is not None else None}]
+
+    @staticmethod
+    def margins(value=None, reason=None, unit="USD"):
+        result = None if value is None else {"value": value, "formula": "f", "input_fact_ids": [1, 2]}
+        if value is None and reason is None:
+            reason = "non disponible"
+        return [{"revenue": {"unit": unit}, "net": {"result": result, "reason": reason}}]
+
+    def test_number_format(self):
+        self.assertEqual(health.number(19.84), "19,8")
+        self.assertEqual(health.number(56.0), "56")
+        self.assertEqual(health.number(-3.25), "−3,2")
+        self.assertEqual(health.number(-0.04), "0")
+
+    def test_growth_over_a_year_is_preferred(self):
+        h = health.growth(self.rev(growth=4.0, growth_year=30.04))
+        self.assertEqual(h["sentence"], "Le chiffre d'affaires a augmenté de 30 % "
+                         "par rapport au même trimestre un an plus tôt.")
+        self.assertEqual(h["basis"], "year")
+        self.assertTrue(h["available"])
+
+    def test_growth_falls_back_to_previous_quarter(self):
+        h = health.growth(self.rev(growth=19.84))
+        self.assertEqual(h["sentence"], "Le chiffre d'affaires a augmenté de 19,8 % "
+                         "par rapport au trimestre précédent.")
+        self.assertEqual(h["basis"], "quarter")
+
+    def test_growth_decline(self):
+        h = health.growth(self.rev(growth_year=-12.5))
+        self.assertEqual(h["sentence"], "Le chiffre d'affaires a baissé de 12,5 % "
+                         "par rapport au même trimestre un an plus tôt.")
+
+    def test_growth_stable(self):
+        h = health.growth(self.rev(growth_year=0.04))
+        self.assertEqual(h["sentence"], "Le chiffre d'affaires est resté stable (0 %) "
+                         "par rapport au même trimestre un an plus tôt.")
+
+    def test_growth_not_available(self):
+        for revenue in ([], self.rev()):
+            h = health.growth(revenue)
+            self.assertFalse(h["available"])
+            self.assertEqual(h["sentence"], "Pas assez de trimestres publiés dans nos "
+                             "données pour mesurer la croissance.")
+
+    def test_profit(self):
+        h = health.profitability(self.margins(56.04))
+        self.assertEqual(h["sentence"], "Au dernier trimestre publié, sur 100 $ de ventes, "
+                         "l'entreprise garde 56 $ de bénéfice.")
+
+    def test_loss(self):
+        h = health.profitability(self.margins(-12.34))
+        self.assertEqual(h["sentence"], "Au dernier trimestre publié, sur 100 $ de ventes, "
+                         "l'entreprise perd 12,3 $.")
+
+    def test_break_even(self):
+        h = health.profitability(self.margins(0.0))
+        self.assertEqual(h["sentence"], "Au dernier trimestre publié, sur 100 $ de ventes, "
+                         "l'entreprise ne gagne ni ne perd rien (0 $).")
+
+    def test_other_currency(self):
+        self.assertIn("sur 100 € de ventes", health.profitability(self.margins(10, unit="EUR"))["sentence"])
+        self.assertIn("sur 100 JPY de ventes", health.profitability(self.margins(10, unit="JPY"))["sentence"])
+
+    def test_profit_not_available_never_zero(self):
+        h = health.profitability(self.margins())
+        self.assertFalse(h["available"])
+        self.assertEqual(h["sentence"], "Le bénéfice du dernier trimestre n'est pas dans nos données.")
+        self.assertFalse(health.profitability([])["available"])
+
+    def test_profit_not_meaningful(self):
+        h = health.profitability(self.margins(reason="non significatif"))
+        self.assertIn("pas significative", h["sentence"])
+        self.assertFalse(h["available"])
+
+    def test_debt_and_cash_wait_for_their_data(self):
+        """Pas de bilan ni de flux dans la base : on le dit, on n'invente rien."""
+        for h in (health.debt(), health.cash()):
+            self.assertFalse(h["available"])
+            self.assertIn("pas encore dans nos données", h["sentence"])
+            self.assertFalse(any(c.isdigit() for c in h["sentence"]))
+
+    def promises(self, statuses):
+        items = [{"fiscal_label": "T%d" % (i + 1), "status": st, "gap_pct": 1.0}
+                 for i, st in enumerate(statuses)]
+        return health.promises_kept(items, promises.profile(items))
+
+    def test_promises_kept(self):
+        h = self.promises([promises.BEAT, promises.MISSED, promises.MET, promises.PENDING])
+        self.assertEqual(h["sentence"], "La direction a atteint ou dépassé 2 de ses 3 "
+                         "prévisions de ventes vérifiables.")
+        self.assertEqual([p["fiscal_label"] for p in h["periods"]], ["T1", "T2", "T3"])
+
+    def test_single_promise(self):
+        self.assertEqual(self.promises([promises.BEAT])["sentence"],
+                         "La direction a atteint ou dépassé sa seule prévision de ventes vérifiable (1 sur 1).")
+        self.assertEqual(self.promises([promises.MISSED])["sentence"],
+                         "La direction a manqué sa seule prévision de ventes vérifiable (0 sur 1).")
+
+    def test_no_promise_yet(self):
+        h = self.promises([promises.PENDING])
+        self.assertFalse(h["available"])
+        self.assertEqual(h["sentence"], "Aucune prévision de la direction n'est encore "
+                         "vérifiable dans nos données.")
+
+    def test_sentence_is_the_parts_joined(self):
+        h = health.growth(self.rev(growth_year=30.0))
+        joined = "".join(p if isinstance(p, str) else p["text"] for p in h["parts"])
+        self.assertEqual(joined, h["sentence"])
+        self.assertEqual([p["text"] for p in h["parts"] if not isinstance(p, str)], ["30 %"])
+
+    def test_no_judgement_words(self):
+        """Les phrases décrivent : aucun jugement, aucun conseil."""
+        banned = ("bon", "bonne", "mauvais", "inquiétant", "rassurant", "solide", "fragile",
+                  "excellent", "achet", "vend", "recommand", "devrait", "objectif")
+        cases = [health.growth(self.rev(growth_year=30)), health.growth(self.rev(growth_year=-30)),
+                 health.growth([]), health.profitability(self.margins(56)),
+                 health.profitability(self.margins(-12)), health.profitability(self.margins()),
+                 health.debt(), health.cash(),
+                 self.promises([promises.BEAT, promises.MISSED]), self.promises([])]
+        for h in cases:
+            words = h["sentence"].lower().replace("'", " ").replace(".", " ").split()
+            for b in banned:
+                self.assertFalse(any(w.startswith(b) for w in words), (b, h["sentence"]))
+
+
+class HealthInView(unittest.TestCase):
+    def setUp(self):
+        self.conn = fresh()
+        seed.seed(self.conn)
+
+    def test_five_indicators_in_order(self):
+        h = views.company_view(self.conn, "NVDA")["health"]
+        self.assertEqual([i["key"] for i in h],
+                         ["growth", "profitability", "debt", "cash", "promises"])
+        self.assertEqual([i["available"] for i in h], [True, False, False, False, True])
+
+    def test_numbers_match_the_rest_of_the_view(self):
+        view = views.company_view(self.conn, "NVDA")
+        g = view["health"][0]
+        self.assertIs(g["result"], view["revenue"][-1]["growth"])
+        self.assertEqual(view["health"][4]["kept"], view["promises"]["profile"]["kept"])
+
+    def test_as_of_changes_the_sentences(self):
+        h = views.company_view(self.conn, "NVDA", "2026-03-01")["health"]
+        self.assertFalse(h[0]["available"])
+
+    def test_with_margin_and_year_ago(self):
+        conn = fresh()
+        cid = facts.upsert_company(conn, "tst", "Test SA")
+        s = facts.add_source(conn, "sec_filing", "https://ex.test/a", "10-Q")
+        facts.add_fact(conn, cid, "revenue", "2025-01-01", "2025-03-31", 100, "USD", s, "2025-05-01")
+        facts.add_fact(conn, cid, "revenue", "2026-01-01", "2026-03-31", 130, "USD", s, "2026-05-01")
+        facts.add_fact(conn, cid, "net_income", "2026-01-01", "2026-03-31", 26, "USD", s, "2026-05-01")
+        h = views.company_view(conn, "TST")["health"]
+        self.assertEqual(h[0]["sentence"], "Le chiffre d'affaires a augmenté de 30 % "
+                         "par rapport au même trimestre un an plus tôt.")
+        self.assertEqual(h[1]["sentence"], "Au dernier trimestre publié, sur 100 $ de ventes, "
+                         "l'entreprise garde 20 $ de bénéfice.")
+        self.assertEqual(h[1]["result"]["input_fact_ids"], [3, 2])
+
+    def test_api_and_demo_page_include_health(self):
+        body = api.route(self.conn, "/api/company/nvda", {})[1]
+        self.assertEqual(len(body["health"]), 5)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "demo.html")
+            export_demo(self.conn, out)
+            with open(out, encoding="utf-8") as fh:
+                html = fh.read()
+        self.assertIn("Santé de l\\'entreprise", html)
+        self.assertIn('"health"', html)
 
 
 class MarginCalc(unittest.TestCase):

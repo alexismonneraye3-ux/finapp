@@ -49,6 +49,10 @@
   .tag.bad { background: #f8dedb; color: var(--bad); }
   .tag.wait { background: #e6ebf2; color: #37506e; }
   .note { font-size: 12px; color: var(--muted); }
+  .health { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .health h3 { margin: 0; font-size: 15px; }
+  .health p { margin: 2px 0 0; }
+  .health.off p { color: var(--muted); }
   .sheet-bg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,24,28,0.45); display: none; align-items: flex-end; justify-content: center; }
   .sheet-bg.open { display: flex; }
   .sheet { background: var(--card); width: 100%; max-width: 560px; border-radius: 16px 16px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; }
@@ -183,6 +187,29 @@ window.__DATA__ = /*__DATA__*/null;
     if (!m.result) { return el('td', { 'class': 'r muted', text: m.reason || 'non disponible' }); }
     return el('td', { 'class': 'r' }, [num(pct0(m.result.value), marginInfo(m, line))]);
   }
+  /* Bloc Santé : la phrase vient du serveur en morceaux ; chaque nombre ouvre son calcul. */
+  function healthInfo(h) {
+    if (h.key === 'growth') {
+      return h.basis === 'year' ? quarterYearInfo(h.current)
+        : growthInfo(h.result, 'Variation sur un trimestre, ' + h.current.fiscal_label);
+    }
+    if (h.key === 'profitability') { return marginInfo(h.line.net, h.line); }
+    var rows = [
+      ['Résultat', h.kept + ' sur ' + h.evaluated],
+      ['Calcul', 'Nombre de prévisions de ventes atteintes ou dépassées, parmi celles dont le résultat est publié.']
+    ];
+    h.periods.forEach(function (p) { rows.push([p.fiscal_label, p.status]); });
+    rows.push(['Détail et sources', 'Chaque prévision et son document d\'origine sont dans le mode Pro, tableau « Mémoire des promesses ».']);
+    return { title: 'Promesses tenues', rows: rows };
+  }
+  function healthLine(h) {
+    var kids = h.parts.map(function (part) {
+      return typeof part === 'string' ? part : num(part.text, healthInfo(h));
+    });
+    return el('div', { 'class': 'health' + (h.available ? '' : ' off') }, [
+      el('h3', { text: h.title }), el('p', {}, kids)
+    ]);
+  }
   function promiseInfo(p) {
     var range = (p.low !== null && p.high !== null)
       ? 'de ' + money(p.low) + ' à ' + money(p.high) : 'non précisée';
@@ -263,6 +290,10 @@ window.__DATA__ = /*__DATA__*/null;
       ]));
     }
     main.appendChild(card('Tient-elle ses promesses ?', kids2));
+
+    main.appendChild(card('Santé de l\'entreprise', (v.health || []).map(healthLine).concat([
+      el('p', { 'class': 'note', text: 'Cinq repères décrits par du code à partir des chiffres publiés. Ils décrivent, ils ne jugent pas.' })
+    ]), true));
 
     main.appendChild(card('Comment lire cela', [
       el('p', { text: 'Avant chaque trimestre, la direction annonce le chiffre d\'affaires qu\'elle vise. ' +

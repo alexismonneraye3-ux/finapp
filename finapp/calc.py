@@ -28,14 +28,27 @@ def growth(cur, prev):
         [cur["id"], prev["id"]])
 
 
-def margin(numerator, denominator):
-    """Marge en % (par exemple résultat net ÷ chiffre d'affaires), ou None."""
+def margin_reason(numerator, denominator):
+    """Pourquoi une marge ne peut pas être calculée, ou None si elle peut l'être.
+
+    « non disponible » : une entrée manque, le dénominateur est nul ou les
+    unités diffèrent. « non significatif » : le dénominateur est négatif.
+    """
     if (numerator is None or denominator is None or denominator["value"] == 0
             or numerator["unit"] != denominator["unit"]):
+        return "non disponible"
+    if denominator["value"] < 0:
+        return "non significatif"
+    return None
+
+
+def margin(numerator, denominator, name="marge"):
+    """Marge en % (par exemple résultat net ÷ chiffre d'affaires), ou None."""
+    if margin_reason(numerator, denominator) is not None:
         return None
     value = numerator["value"] / denominator["value"] * 100
     return _result(
-        "marge", value, "%",
+        name, value, "%",
         "%s ÷ %s × 100" % (_n(numerator["value"]), _n(denominator["value"])),
         [numerator["id"], denominator["id"]])
 

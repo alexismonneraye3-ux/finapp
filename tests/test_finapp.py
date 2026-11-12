@@ -148,6 +148,146 @@ class Calc(unittest.TestCase):
         self.assertEqual(promises.status(9.9, None, 10, None), promises.MISSED)
 
 
+class MarginCalc(unittest.TestCase):
+    """Cas attendus par docs/specifications/02-calculs.md, section 10."""
+
+    @staticmethod
+    def f(fid, value, unit="USD"):
+        return {"id": fid, "value": value, "unit": unit}
+
+    def test_normal_case_checked_by_hand(self):
+        m = calc.margin(self.f(1, 45), self.f(2, 200), "marge nette")
+        self.assertAlmostEqual(m["value"], 22.5)
+        self.assertEqual(m["unit"], "%")
+        self.assertEqual(m["name"], "marge nette")
+
+    def test_formula_and_inputs_are_returned(self):
+        m = calc.margin(self.f(1, 45), self.f(2, 200))
+        self.assertEqual(m["formula"], "45 ÷ 200 × 100")
+        self.assertEqual(m["input_fact_ids"], [1, 2])
+        self.assertEqual(m["name"], "marge")
+
+    def test_missing_input(self):
+        self.assertIsNone(calc.margin(None, self.f(2, 200)))
+        self.assertIsNone(calc.margin(self.f(1, 45), None))
+        self.assertEqual(calc.margin_reason(None, self.f(2, 200)), "non disponible")
+
+    def test_division_by_zero(self):
+        self.assertIsNone(calc.margin(self.f(1, 45), self.f(2, 0)))
+        self.assertEqual(calc.margin_reason(self.f(1, 45), self.f(2, 0)), "non disponible")
+
+    def test_negative_numerator_gives_negative_margin(self):
+        m = calc.margin(self.f(1, -30), self.f(2, 200))
+        self.assertAlmostEqual(m["value"], -15.0)
+
+    def test_negative_denominator_is_not_meaningful(self):
+        self.assertIsNone(calc.margin(self.f(1, 45), self.f(2, -200)))
+        self.assertEqual(calc.margin_reason(self.f(1, 45), self.f(2, -200)), "non significatif")
+
+    def test_different_units(self):
+        self.assertIsNone(calc.margin(self.f(1, 45, "EUR"), self.f(2, 200)))
+        self.assertEqual(calc.margin_reason(self.f(1, 45, "EUR"), self.f(2, 200)), "non disponible")
+
+    def test_reason_is_none_when_computable(self):
+        self.assertIsNone(calc.margin_reason(self.f(1, 45), self.f(2, 200)))
+
+
+class MarginsInView(unittest.TestCase):
+    """Marges par trimestre dans la fiche. Société et chiffres inventés pour le test."""
+
+    Q1 = ("2026-01-01", "2026-03-31")
+    Q2 = ("2026-04-01", "2026-06-30")
+
+    def setUp(self):
+        self.conn = fresh()
+        self.cid = facts.upsert_company(self.conn, "tst", "Test SA")
+        self.s1 = facts.add_source(self.conn, "sec_filing", "https://ex.test/q1", "10-Q T1", "2026-05-01")
+        self.s2 = facts.add_source(self.conn, "sec_filing", "https://ex.test/q2", "10-Q T2", "2026-08-01")
+        self.add("revenue", self.Q1, 200, self.s1, "2026-05-01")
+        self.add("gross_profit", self.Q1, 120, self.s1, "2026-05-01")
+        self.add("operating_income", self.Q1, 50, self.s1, "2026-05-01")
+        self.add("net_income", self.Q1, -30, self.s1, "2026-05-01")
+        self.add("revenue", self.Q2, 250, self.s2, "2026-08-01")
+        self.add("gross_profit", self.Q2, 150, self.s2, "2026-08-01")
+
+    def add(self, metric, period, value, source, known_at, **kw):
+        facts.add_fact(self.conn, self.cid, metric, period[0], period[1], value,
+                       "USD", source, known_at, **kw)
+
+    def view(self, as_of=None):
+        return views.company_view(self.conn, "TST", as_of)
+
+    def test_three_margins_per_quarter(self):
+        q1, q2 = self.view()["margins"]
+        self.assertAlmostEqual(q1["gross"]["result"]["value"], 60.0)
+        self.assertAlmostEqual(q1["operating"]["result"]["value"], 25.0)
+        self.assertAlmostEqual(q1["net"]["result"]["value"], -15.0)
+        self.assertAlmostEqual(q2["gross"]["result"]["value"], 60.0)
+        self.assertEqual(q1["gross"]["result"]["name"], "marge brute")
+        self.assertEqual(q1["net"]["result"]["formula"], "-30 ÷ 200 × 100")
+
+    def test_missing_fact_is_not_available_never_zero(self):
+        q2 = self.view()["margins"][1]
+        for key in ("operating", "net"):
+            self.assertIsNone(q2[key]["result"])
+            self.assertEqual(q2[key]["reason"], "non disponible")
+            self.assertIsNone(q2[key]["numerator"])
+
+    def test_each_margin_carries_both_sources(self):
+        q1 = self.view()["margins"][0]
+        m = q1["gross"]
+        self.assertEqual(m["numerator"]["source"]["url"], "https://ex.test/q1")
+        self.assertEqual(q1["revenue"]["source"]["url"], "https://ex.test/q1")
+        self.assertEqual(m["result"]["input_fact_ids"],
+                         [m["numerator"]["id"], q1["revenue"]["id"]])
+        self.assertIsNone(m["reason"])
+
+    def test_as_of_uses_only_what_was_known(self):
+        lines = self.view("2026-06-01")["margins"]
+        self.assertEqual(len(lines), 1)
+        s3 = facts.add_source(self.conn, "sec_filing", "https://ex.test/q1a", "10-Q/A", "2026-09-01")
+        self.add("gross_profit", self.Q1, 100, s3, "2026-09-01")
+        self.assertAlmostEqual(self.view("2026-08-15")["margins"][0]["gross"]["result"]["value"], 60.0)
+        latest = self.view()["margins"][0]["gross"]
+        self.assertAlmostEqual(latest["result"]["value"], 50.0)
+        self.assertEqual(latest["numerator"]["source"]["url"], "https://ex.test/q1a")
+
+    def test_negative_revenue_is_not_meaningful(self):
+        s = facts.add_source(self.conn, "sec_filing", "https://ex.test/q3", "10-Q T3", "2026-11-01")
+        q3 = ("2026-07-01", "2026-09-30")
+        self.add("revenue", q3, -10, s, "2026-11-01")
+        self.add("net_income", q3, 5, s, "2026-11-01")
+        net = self.view()["margins"][2]["net"]
+        self.assertIsNone(net["result"])
+        self.assertEqual(net["reason"], "non significatif")
+
+    def test_period_must_match_exactly(self):
+        s = facts.add_source(self.conn, "sec_filing", "https://ex.test/q3", "10-Q T3", "2026-11-01")
+        self.add("revenue", ("2026-07-01", "2026-09-30"), 300, s, "2026-11-01")
+        self.add("net_income", ("2026-06-25", "2026-09-30"), 60, s, "2026-11-01")
+        net = self.view()["margins"][2]["net"]
+        self.assertIsNone(net["result"])
+        self.assertEqual(net["reason"], "non disponible")
+
+    def test_sample_numerator_flags_the_view(self):
+        self.assertFalse(self.view()["has_sample_data"])
+        self.add("operating_income", self.Q2, 70, self.s2, "2026-08-01", is_sample=True)
+        self.assertTrue(self.view()["has_sample_data"])
+
+    def test_api_and_demo_page_include_margins(self):
+        code, body = api.route(self.conn, "/api/company/TST", {})
+        self.assertEqual(code, 200)
+        self.assertEqual(len(body["margins"]), 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "demo.html")
+            export_demo(self.conn, out)
+            with open(out, encoding="utf-8") as fh:
+                html = fh.read()
+        self.assertIn('"margins"', html)
+        self.assertIn("Marges par trimestre", html)
+        self.assertIn("marginInfo", html)
+
+
 class NvidiaExample(unittest.TestCase):
     """Le jeu d'exemple doit redonner les écarts calculés à la main dans l'étude."""
 
@@ -196,6 +336,15 @@ class NvidiaExample(unittest.TestCase):
                        109.0e9, "USD", s, "2026-11-19", 2027, "Q3")
         flagged = self.view()["promises"]["unusual"]
         self.assertEqual([f["fiscal_label"] for f in flagged], ["T3 exercice 2027"])
+
+    def test_margins_not_available_without_published_inputs(self):
+        """Le jeu d'exemple n'a que le chiffre d'affaires : aucune marge inventée."""
+        lines = views.company_view(self.conn, "NVDA")["margins"]
+        self.assertTrue(lines)
+        for line in lines:
+            for key in ("gross", "operating", "net"):
+                self.assertIsNone(line[key]["result"])
+                self.assertEqual(line[key]["reason"], "non disponible")
 
 
 class Api(unittest.TestCase):

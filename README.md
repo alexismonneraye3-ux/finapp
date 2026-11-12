@@ -32,11 +32,11 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 | `finapp/sec.py` | Collecte et lecture des comptes au format SEC companyfacts |
 | `finapp/calc.py` | Variations, marges, écarts : chaque résultat garde sa formule et ses entrées |
 | `finapp/promises.py` | Verdict de chaque prévision, habitude de l'entreprise, ruptures d'habitude |
-| `finapp/views.py` | Assemble la fiche d'une société |
+| `finapp/views.py` | Assemble la fiche d'une société : chiffre d'affaires, marges par trimestre, promesses |
 | `finapp/api.py` | API JSON (`/api/companies`, `/api/company/<ticker>?as_of=AAAA-MM-JJ`) et service de l'écran |
 | `web/index.html` | Écran unique, modes Essentiel et Pro, téléphone et ordinateur |
 | `fixtures/` | Jeu d'exemple Nvidia |
-| `tests/` | 25 tests automatiques |
+| `tests/` | 42 tests automatiques |
 
 ## Les trois règles du socle
 
@@ -50,6 +50,10 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 
 ## Limites actuelles
 
+- **Marges vides dans l'exemple.** Le mode Pro affiche la marge brute, la
+  marge opérationnelle et la marge nette par trimestre. Le jeu d'exemple
+  Nvidia ne contient que le chiffre d'affaires : ces colonnes y affichent
+  donc « non disponible » tant que des comptes complets ne sont pas chargés.
 - **Données d'exemple.** Les chiffres Nvidia fournis sont ceux des communiqués,
   arrondis, avec des dates de période et de dépôt approximatives. La prévision
   du T4 exercice 2026 est reconstituée à partir d'un article. L'écran les

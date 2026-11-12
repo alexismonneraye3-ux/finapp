@@ -115,6 +115,7 @@ window.__DATA__ = /*__DATA__*/null;
   function fr(x, d) { return x.toFixed(d).replace('.', ','); }
   function money(v) { return fr(v / 1e9, 1) + ' Md$'; }
   function pct(v) { return (v >= 0 ? '+' : '−') + fr(Math.abs(v), 1) + ' %'; }
+  function pct0(v) { return (v < 0 ? '−' : '') + fr(Math.abs(v), 1) + ' %'; }
   function day(s) {
     var p = s.split('-');
     return parseInt(p[2], 10) + ' ' + MONTHS[parseInt(p[1], 10) - 1] + ' ' + p[0];
@@ -139,6 +140,24 @@ window.__DATA__ = /*__DATA__*/null;
       ['Calcul', g.formula],
       ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
     ] };
+  }
+  var METRIC_NAMES = { gross_profit: 'Marge brute (montant)', operating_income: 'Résultat opérationnel', net_income: 'Résultat net' };
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function marginInfo(m, line) {
+    var n = m.numerator, rev = line.revenue;
+    return { title: cap(m.name) + ', ' + line.fiscal_label, rows: [
+      ['Résultat', pct0(m.result.value)],
+      ['Calcul', m.result.formula],
+      [METRIC_NAMES[n.metric] || n.metric, money(n.value) + (n.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(n.known_at)],
+      ['Source de ce montant', n.source],
+      ['Chiffre d\'affaires', money(rev.value) + (rev.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(rev.known_at)],
+      ['Source du chiffre d\'affaires', rev.source],
+      ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
+    ] };
+  }
+  function marginCell(m, line) {
+    if (!m.result) { return el('td', { 'class': 'r muted', text: m.reason || 'non disponible' }); }
+    return el('td', { 'class': 'r' }, [num(pct0(m.result.value), marginInfo(m, line))]);
   }
   function promiseInfo(p) {
     var range = (p.low !== null && p.high !== null)
@@ -246,6 +265,25 @@ window.__DATA__ = /*__DATA__*/null;
     });
     t1.appendChild(b1);
     main.appendChild(card('Chiffre d\'affaires trimestriel', [el('div', { 'class': 'scroll' }, [t1])], true));
+
+    var tm = el('table', {}, [el('thead', {}, [el('tr', {}, [
+      el('th', { text: 'Période' }), el('th', { 'class': 'r', text: 'Marge brute' }),
+      el('th', { 'class': 'r', text: 'Marge opérationnelle' }), el('th', { 'class': 'r', text: 'Marge nette' })
+    ])])]);
+    var bm = el('tbody');
+    (v.margins || []).forEach(function (line) {
+      bm.appendChild(el('tr', {}, [
+        el('td', { text: line.fiscal_label }),
+        marginCell(line.gross, line), marginCell(line.operating, line), marginCell(line.net, line)
+      ]));
+    });
+    tm.appendChild(bm);
+    main.appendChild(card('Marges par trimestre', [
+      (v.margins || []).length ? el('div', { 'class': 'scroll' }, [tm]) : el('p', { text: 'Aucun chiffre publié à cette date.' }),
+      el('p', { 'class': 'note', text: 'Part du chiffre d\'affaires qui reste à chaque étage du compte de résultat. ' +
+        '« Non disponible » : un des deux chiffres n\'est pas publié dans nos données. ' +
+        '« Non significatif » : le chiffre d\'affaires est négatif.' })
+    ], true));
 
     var t2 = el('table', {}, [el('thead', {}, [el('tr', {}, [
       el('th', { text: 'Période' }), el('th', { 'class': 'r', text: 'Annoncé' }),

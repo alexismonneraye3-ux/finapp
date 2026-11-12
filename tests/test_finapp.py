@@ -779,6 +779,119 @@ class ReportOverHttp(unittest.TestCase):
         self.assertEqual(out.getvalue().strip(), "Aucun signalement.")
 
 
+class InventedSamples(unittest.TestCase):
+    """Deux sociétés inventées : perte, capitaux propres négatifs, exercice décalé."""
+
+    def setUp(self):
+        self.conn = fresh()
+        seed.seed(self.conn)
+
+    def view(self, ticker, as_of=None):
+        return views.company_view(self.conn, ticker, as_of)
+
+    def test_every_sample_fact_is_marked_as_sample(self):
+        self.assertEqual(self.conn.execute(
+            "SELECT COUNT(*) FROM facts WHERE is_sample = 0").fetchone()[0], 0)
+        for ticker in ("NVDA", "ZBOR", "ZQUE"):
+            self.assertTrue(self.view(ticker)["has_sample_data"])
+
+    def test_invented_companies_are_flagged_and_named_as_such(self):
+        self.assertFalse(self.view("NVDA")["company"]["is_fictional"])
+        for ticker in ("ZBOR", "ZQUE"):
+            company = self.view(ticker)["company"]
+            self.assertTrue(company["is_fictional"])
+            self.assertIn("inventée", company["name"])
+            self.assertIsNone(company["cik"])
+
+    def test_invented_sources_cannot_be_mistaken_for_real_documents(self):
+        rows = self.conn.execute(
+            "SELECT DISTINCT s.url FROM sources s JOIN facts f ON f.source_id = s.id "
+            "JOIN companies c ON c.id = f.company_id WHERE c.is_fictional = 1").fetchall()
+        self.assertTrue(rows)
+        for r in rows:
+            self.assertTrue(r["url"].startswith("https://exemple.invalid/"), r["url"])
+
+    def test_company_at_a_loss(self):
+        v = self.view("ZBOR")
+        self.assertEqual(len(v["revenue"]), 8)
+        for line in v["margins"]:
+            self.assertLess(line["net"]["result"]["value"], 0)
+            self.assertGreater(line["gross"]["result"]["value"], 0)
+        h = {i["key"]: i for i in v["health"]}
+        self.assertEqual(h["profitability"]["sentence"], "Au dernier trimestre publié, sur 100 $ "
+                         "de ventes, l'entreprise perd 7,6 $.")
+        self.assertEqual(h["growth"]["sentence"], "Le chiffre d'affaires a augmenté de 29,4 % "
+                         "par rapport au même trimestre un an plus tôt.")
+        self.assertLess(v["chart"]["axis"]["min"], 0)
+
+    def test_promises_include_missed_kept_and_beaten(self):
+        v = self.view("ZBOR")
+        statuses = [i["status"] for i in v["promises"]["items"]]
+        self.assertEqual(statuses, [promises.MISSED, promises.MET, promises.MET, promises.MET,
+                                    promises.MISSED, promises.BEAT, promises.PENDING])
+        self.assertEqual(v["health"][4]["sentence"], "La direction a atteint ou dépassé 4 de "
+                         "ses 6 prévisions de ventes vérifiables.")
+
+    def test_shifted_fiscal_year(self):
+        v = self.view("ZQUE")
+        self.assertEqual([y["fiscal_label"] for y in v["revenue_annual"]],
+                         ["Exercice clos le 30 juin 2024", "Exercice clos le 30 juin 2025"])
+        self.assertEqual(v["revenue_annual"][0]["value"], 475e6)
+        self.assertAlmostEqual(v["revenue_annual"][1]["growth"]["value"], (497 - 475) / 475 * 100)
+        self.assertEqual(v["revenue"][0]["fiscal_label"], "T1 exercice 2024")
+        self.assertEqual(v["revenue"][0]["period_start"], "2023-07-01")
+
+    def test_seasonal_sales_year_over_year(self):
+        """Ventes saisonnières : en baisse sur un trimestre, en hausse sur un an."""
+        last = self.view("ZQUE")["revenue"][-1]
+        self.assertLess(last["growth"]["value"], 0)
+        self.assertAlmostEqual(last["growth_year"]["value"], (99 - 95) / 95 * 100)
+
+    def test_annual_total_equals_the_four_quarters(self):
+        for ticker in ("ZBOR", "ZQUE"):
+            v = self.view(ticker)
+            quarters = [f["value"] for f in v["revenue"]]
+            self.assertEqual([y["value"] for y in v["revenue_annual"]],
+                             [sum(quarters[:4]), sum(quarters[4:])])
+
+    def test_negative_equity_is_stored_for_later_tasks(self):
+        cid = facts.get_company(self.conn, "ZQUE")["id"]
+        rows = facts.series(self.conn, cid, "equity", period_type="instant")
+        self.assertEqual(len(rows), 8)
+        self.assertTrue(all(r["value"] < 0 for r in rows))
+        self.assertEqual(rows[-1]["period_start"], "")
+
+    def test_as_of_works_on_invented_companies(self):
+        self.assertEqual(len(self.view("ZBOR", "2024-12-31")["revenue"]), 3)
+
+    def test_seed_twice_adds_nothing(self):
+        self.assertEqual(seed.seed(self.conn), 0)
+
+    def test_fact_without_any_source_is_not_stored(self):
+        doc = {"entityName": "Sans source", "facts": {"us-gaap": {"Revenues": {"units": {"USD": [
+            {"start": "2025-01-01", "end": "2025-03-31", "val": 5, "filed": "2025-05-01"}]}}}}}
+        self.assertEqual(sec.ingest(fresh(), doc, "SANS"), 0)
+
+    def test_old_database_gains_the_new_column(self):
+        conn = db.connect()
+        conn.execute("CREATE TABLE companies (id INTEGER PRIMARY KEY, ticker TEXT NOT NULL UNIQUE, "
+                     "name TEXT NOT NULL, cik TEXT)")
+        conn.execute("INSERT INTO companies (ticker, name) VALUES ('OLD', 'Ancienne')")
+        db.init(conn)
+        self.assertEqual(facts.get_company(conn, "OLD")["is_fictional"], 0)
+
+    def test_demo_page_has_the_three_companies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "demo.html")
+            export_demo(self.conn, out)
+            with open(out, encoding="utf-8") as fh:
+                html = fh.read()
+        start = html.index("window.__DATA__ = ") + len("window.__DATA__ = ")
+        data = json.loads(html[start:html.index(";\n", start)])
+        self.assertEqual(sorted(data), ["NVDA", "ZBOR", "ZQUE"])
+        self.assertIn("Société inventée pour la démonstration", html)
+
+
 class MarginCalc(unittest.TestCase):
     """Cas attendus par docs/specifications/02-calculs.md, section 10."""
 
@@ -1110,8 +1223,10 @@ class Api(unittest.TestCase):
         seed.seed(self.conn)
 
     def test_routes(self):
-        self.assertEqual(api.route(self.conn, "/api/companies", {})[1],
-                         [{"ticker": "NVDA", "name": "NVIDIA Corporation"}])
+        self.assertEqual(api.route(self.conn, "/api/companies", {})[1], [
+            {"ticker": "NVDA", "name": "NVIDIA Corporation", "is_fictional": False},
+            {"ticker": "ZBOR", "name": "Atelier Boréal (société inventée)", "is_fictional": True},
+            {"ticker": "ZQUE", "name": "Maison Quenelle (société inventée)", "is_fictional": True}])
         code, body = api.route(self.conn, "/api/company/nvda", {})
         self.assertEqual((code, body["company"]["ticker"]), (200, "NVDA"))
         self.assertEqual(api.route(self.conn, "/api/company/ZZZ", {})[0], 404)

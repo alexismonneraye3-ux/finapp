@@ -129,7 +129,8 @@ def company_view(conn, ticker, as_of=None):
     profile = promises.profile(items)
     return {
         "company": {"ticker": company["ticker"], "name": company["name"],
-                    "cik": company["cik"]},
+                    "cik": company["cik"],
+                    "is_fictional": bool(company["is_fictional"])},
         "as_of": as_of,
         "timeline": timeline(conn, cid),
         "revenue": revenue,

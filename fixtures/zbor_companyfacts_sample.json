@@ -1,0 +1,433 @@
+{
+ "_note": "Jeu d'exemple entièrement inventé, au format SEC companyfacts. Atelier Boréal n'existe pas : aucun de ces chiffres n'est réel. Cas illustré : une société qui perd de l'argent chaque trimestre, avec des pertes qui se réduisent. Les adresses de source sont factices (domaine réservé .invalid).",
+ "_fictional": true,
+ "entityName": "Atelier Boréal (société inventée)",
+ "facts": {
+  "us-gaap": {
+   "Revenues": {
+    "units": {
+     "USD": [
+      {
+       "start": "2024-01-01",
+       "end": "2024-03-31",
+       "val": 42000000,
+       "fy": 2024,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2024-05-08",
+       "_url": "https://exemple.invalid/zbor/2024-q1"
+      },
+      {
+       "start": "2024-04-01",
+       "end": "2024-06-30",
+       "val": 45000000,
+       "fy": 2024,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2024-08-07",
+       "_url": "https://exemple.invalid/zbor/2024-q2"
+      },
+      {
+       "start": "2024-07-01",
+       "end": "2024-09-30",
+       "val": 47000000,
+       "fy": 2024,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2024-11-07",
+       "_url": "https://exemple.invalid/zbor/2024-q3"
+      },
+      {
+       "start": "2024-10-01",
+       "end": "2024-12-31",
+       "val": 51000000,
+       "fy": 2024,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-q4"
+      },
+      {
+       "start": "2024-01-01",
+       "end": "2024-12-31",
+       "val": 185000000,
+       "fy": 2024,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-exercice"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-03-31",
+       "val": 54000000,
+       "fy": 2025,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2025-05-08",
+       "_url": "https://exemple.invalid/zbor/2025-q1"
+      },
+      {
+       "start": "2025-04-01",
+       "end": "2025-06-30",
+       "val": 58000000,
+       "fy": 2025,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2025-08-07",
+       "_url": "https://exemple.invalid/zbor/2025-q2"
+      },
+      {
+       "start": "2025-07-01",
+       "end": "2025-09-30",
+       "val": 61000000,
+       "fy": 2025,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2025-11-07",
+       "_url": "https://exemple.invalid/zbor/2025-q3"
+      },
+      {
+       "start": "2025-10-01",
+       "end": "2025-12-31",
+       "val": 66000000,
+       "fy": 2025,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-q4"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-12-31",
+       "val": 239000000,
+       "fy": 2025,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-exercice"
+      }
+     ]
+    }
+   },
+   "GrossProfit": {
+    "units": {
+     "USD": [
+      {
+       "start": "2024-01-01",
+       "end": "2024-03-31",
+       "val": 17000000,
+       "fy": 2024,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2024-05-08",
+       "_url": "https://exemple.invalid/zbor/2024-q1"
+      },
+      {
+       "start": "2024-04-01",
+       "end": "2024-06-30",
+       "val": 18000000,
+       "fy": 2024,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2024-08-07",
+       "_url": "https://exemple.invalid/zbor/2024-q2"
+      },
+      {
+       "start": "2024-07-01",
+       "end": "2024-09-30",
+       "val": 19000000,
+       "fy": 2024,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2024-11-07",
+       "_url": "https://exemple.invalid/zbor/2024-q3"
+      },
+      {
+       "start": "2024-10-01",
+       "end": "2024-12-31",
+       "val": 20000000,
+       "fy": 2024,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-q4"
+      },
+      {
+       "start": "2024-01-01",
+       "end": "2024-12-31",
+       "val": 74000000,
+       "fy": 2024,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-exercice"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-03-31",
+       "val": 22000000,
+       "fy": 2025,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2025-05-08",
+       "_url": "https://exemple.invalid/zbor/2025-q1"
+      },
+      {
+       "start": "2025-04-01",
+       "end": "2025-06-30",
+       "val": 23000000,
+       "fy": 2025,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2025-08-07",
+       "_url": "https://exemple.invalid/zbor/2025-q2"
+      },
+      {
+       "start": "2025-07-01",
+       "end": "2025-09-30",
+       "val": 24000000,
+       "fy": 2025,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2025-11-07",
+       "_url": "https://exemple.invalid/zbor/2025-q3"
+      },
+      {
+       "start": "2025-10-01",
+       "end": "2025-12-31",
+       "val": 26000000,
+       "fy": 2025,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-q4"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-12-31",
+       "val": 95000000,
+       "fy": 2025,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-exercice"
+      }
+     ]
+    }
+   },
+   "OperatingIncomeLoss": {
+    "units": {
+     "USD": [
+      {
+       "start": "2024-01-01",
+       "end": "2024-03-31",
+       "val": -9000000,
+       "fy": 2024,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2024-05-08",
+       "_url": "https://exemple.invalid/zbor/2024-q1"
+      },
+      {
+       "start": "2024-04-01",
+       "end": "2024-06-30",
+       "val": -9000000,
+       "fy": 2024,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2024-08-07",
+       "_url": "https://exemple.invalid/zbor/2024-q2"
+      },
+      {
+       "start": "2024-07-01",
+       "end": "2024-09-30",
+       "val": -8000000,
+       "fy": 2024,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2024-11-07",
+       "_url": "https://exemple.invalid/zbor/2024-q3"
+      },
+      {
+       "start": "2024-10-01",
+       "end": "2024-12-31",
+       "val": -7000000,
+       "fy": 2024,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-q4"
+      },
+      {
+       "start": "2024-01-01",
+       "end": "2024-12-31",
+       "val": -33000000,
+       "fy": 2024,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-exercice"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-03-31",
+       "val": -7000000,
+       "fy": 2025,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2025-05-08",
+       "_url": "https://exemple.invalid/zbor/2025-q1"
+      },
+      {
+       "start": "2025-04-01",
+       "end": "2025-06-30",
+       "val": -6000000,
+       "fy": 2025,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2025-08-07",
+       "_url": "https://exemple.invalid/zbor/2025-q2"
+      },
+      {
+       "start": "2025-07-01",
+       "end": "2025-09-30",
+       "val": -5000000,
+       "fy": 2025,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2025-11-07",
+       "_url": "https://exemple.invalid/zbor/2025-q3"
+      },
+      {
+       "start": "2025-10-01",
+       "end": "2025-12-31",
+       "val": -4000000,
+       "fy": 2025,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-q4"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-12-31",
+       "val": -22000000,
+       "fy": 2025,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-exercice"
+      }
+     ]
+    }
+   },
+   "NetIncomeLoss": {
+    "units": {
+     "USD": [
+      {
+       "start": "2024-01-01",
+       "end": "2024-03-31",
+       "val": -10000000,
+       "fy": 2024,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2024-05-08",
+       "_url": "https://exemple.invalid/zbor/2024-q1"
+      },
+      {
+       "start": "2024-04-01",
+       "end": "2024-06-30",
+       "val": -9000000,
+       "fy": 2024,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2024-08-07",
+       "_url": "https://exemple.invalid/zbor/2024-q2"
+      },
+      {
+       "start": "2024-07-01",
+       "end": "2024-09-30",
+       "val": -9000000,
+       "fy": 2024,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2024-11-07",
+       "_url": "https://exemple.invalid/zbor/2024-q3"
+      },
+      {
+       "start": "2024-10-01",
+       "end": "2024-12-31",
+       "val": -8000000,
+       "fy": 2024,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-q4"
+      },
+      {
+       "start": "2024-01-01",
+       "end": "2024-12-31",
+       "val": -36000000,
+       "fy": 2024,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2025-02-07",
+       "_url": "https://exemple.invalid/zbor/2024-exercice"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-03-31",
+       "val": -7000000,
+       "fy": 2025,
+       "fp": "Q1",
+       "form": "10-Q",
+       "filed": "2025-05-08",
+       "_url": "https://exemple.invalid/zbor/2025-q1"
+      },
+      {
+       "start": "2025-04-01",
+       "end": "2025-06-30",
+       "val": -7000000,
+       "fy": 2025,
+       "fp": "Q2",
+       "form": "10-Q",
+       "filed": "2025-08-07",
+       "_url": "https://exemple.invalid/zbor/2025-q2"
+      },
+      {
+       "start": "2025-07-01",
+       "end": "2025-09-30",
+       "val": -6000000,
+       "fy": 2025,
+       "fp": "Q3",
+       "form": "10-Q",
+       "filed": "2025-11-07",
+       "_url": "https://exemple.invalid/zbor/2025-q3"
+      },
+      {
+       "start": "2025-10-01",
+       "end": "2025-12-31",
+       "val": -5000000,
+       "fy": 2025,
+       "fp": "Q4",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-q4"
+      },
+      {
+       "start": "2025-01-01",
+       "end": "2025-12-31",
+       "val": -25000000,
+       "fy": 2025,
+       "fp": "FY",
+       "form": "10-K",
+       "filed": "2026-02-07",
+       "_url": "https://exemple.invalid/zbor/2025-exercice"
+      }
+     ]
+    }
+   }
+  }
+ }
+}

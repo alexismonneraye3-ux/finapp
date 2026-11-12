@@ -1,0 +1,96 @@
+{
+ "_note": "Prévisions de chiffre d'affaires entièrement inventées pour Atelier Boréal, société qui n'existe pas. Elles contiennent des prévisions manquées, tenues et dépassées.",
+ "guidance": [
+  {
+   "metric": "revenue",
+   "fiscal_label": "T3 exercice 2024",
+   "period_end": "2024-09-30",
+   "low": 47500000.0,
+   "mid": 48500000.0,
+   "high": 49500000.0,
+   "unit": "USD",
+   "stated_at": "2024-08-07",
+   "source_kind": "press_release",
+   "source_title": "Communiqué inventé du 2024-08-07 (exemple)",
+   "source_url": "https://exemple.invalid/zbor/communique-2024-08-07"
+  },
+  {
+   "metric": "revenue",
+   "fiscal_label": "T4 exercice 2024",
+   "period_end": "2024-12-31",
+   "low": 49000000,
+   "mid": 50000000,
+   "high": 51000000,
+   "unit": "USD",
+   "stated_at": "2024-11-07",
+   "source_kind": "press_release",
+   "source_title": "Communiqué inventé du 2024-11-07 (exemple)",
+   "source_url": "https://exemple.invalid/zbor/communique-2024-11-07"
+  },
+  {
+   "metric": "revenue",
+   "fiscal_label": "T1 exercice 2025",
+   "period_end": "2025-03-31",
+   "low": 52000000,
+   "mid": 53000000,
+   "high": 54000000,
+   "unit": "USD",
+   "stated_at": "2025-02-07",
+   "source_kind": "press_release",
+   "source_title": "Communiqué inventé du 2025-02-07 (exemple)",
+   "source_url": "https://exemple.invalid/zbor/communique-2025-02-07"
+  },
+  {
+   "metric": "revenue",
+   "fiscal_label": "T2 exercice 2025",
+   "period_end": "2025-06-30",
+   "low": 57000000,
+   "mid": 58000000,
+   "high": 59000000,
+   "unit": "USD",
+   "stated_at": "2025-05-08",
+   "source_kind": "press_release",
+   "source_title": "Communiqué inventé du 2025-05-08 (exemple)",
+   "source_url": "https://exemple.invalid/zbor/communique-2025-05-08"
+  },
+  {
+   "metric": "revenue",
+   "fiscal_label": "T3 exercice 2025",
+   "period_end": "2025-09-30",
+   "low": 62000000,
+   "mid": 63000000,
+   "high": 64000000,
+   "unit": "USD",
+   "stated_at": "2025-08-07",
+   "source_kind": "press_release",
+   "source_title": "Communiqué inventé du 2025-08-07 (exemple)",
+   "source_url": "https://exemple.invalid/zbor/communique-2025-08-07"
+  },
+  {
+   "metric": "revenue",
+   "fiscal_label": "T4 exercice 2025",
+   "period_end": "2025-12-31",
+   "low": 63000000,
+   "mid": 64000000,
+   "high": 65000000,
+   "unit": "USD",
+   "stated_at": "2025-11-07",
+   "source_kind": "press_release",
+   "source_title": "Communiqué inventé du 2025-11-07 (exemple)",
+   "source_url": "https://exemple.invalid/zbor/communique-2025-11-07"
+  },
+  {
+   "metric": "revenue",
+   "fiscal_label": "T1 exercice 2026",
+   "period_end": "2026-03-31",
+   "low": 67000000,
+   "mid": 68000000,
+   "high": 69000000,
+   "unit": "USD",
+   "stated_at": "2026-02-07",
+   "source_kind": "press_release",
+   "source_title": "Communiqué inventé du 2026-02-07 (exemple)",
+   "source_url": "https://exemple.invalid/zbor/communique-2026-02-07"
+  }
+ ]
+}

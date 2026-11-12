@@ -68,7 +68,6 @@ Référence : `02-calculs.md`, `03-ecrans.md` section 3.3.
 
 Référence : `03-ecrans.md` sections 2 et 3, `07` section 6.
 
-- [ ] 2.1 — Deuxième et troisième jeux d'exemple (marqués exemple), avec des cas différents : société en perte, capitaux propres négatifs, exercice décalé.
 - [ ] 2.2 — Navigation par adresse (`#/societe/NVDA`), barre du bas sur téléphone et barre latérale sur ordinateur, retour arrière fonctionnel.
 - [ ] 2.3 — Recherche par nom ou symbole tolérante aux accents, à la casse et aux fautes légères ; route d'API et champ de recherche. Tests.
 - [ ] 2.4 — Écran d'accueil : barre de recherche, liste des sociétés, sociétés récemment consultées.
@@ -268,3 +267,4 @@ Référence : `05-creations.md` sections 4, 5 et 7, `04-ia.md` section 10.
 - [x] 1.12 — Bloc « Santé » du mode Essentiel : cinq indicateurs (croissance, rentabilité, dette, trésorerie, promesses tenues), chacun avec une phrase modèle produite par du code. Tests des phrases. Fait pour la croissance, la rentabilité et les promesses ; dette et trésorerie affichent « pas encore dans nos données » jusqu'aux tâches 1.19 et 1.20.
 - [x] 1.14 — Graphiques SVG maison : courbe et barres pour chiffre d'affaires et bénéfice, valeurs au toucher, tableau équivalent accessible (`03-ecrans.md` section 4).
 - [x] 1.15 — Fiche source enrichie : formule, entrées, contrôles de qualité, bouton « signaler une erreur » (stockage du signalement, route d'API, tests). Les contrôles de qualité s'afficheront avec la tâche 3.11.
+- [x] 2.1 — Deuxième et troisième jeux d'exemple (marqués exemple), avec des cas différents : société en perte, capitaux propres négatifs, exercice décalé. Deux sociétés entièrement inventées (ZBOR, ZQUE), signalées comme telles à l'écran.

@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS companies (
     id      INTEGER PRIMARY KEY,
     ticker  TEXT NOT NULL UNIQUE,
     name    TEXT NOT NULL,
-    cik     TEXT
+    cik     TEXT,
+    is_fictional INTEGER NOT NULL DEFAULT 0   -- 1 = société inventée pour la démonstration
 );
 
 -- Un document d'origine : dépôt réglementaire, communiqué, article.
@@ -78,7 +79,15 @@ def connect(path=":memory:"):
     return conn
 
 
+def _add_missing_columns(conn):
+    """Met à niveau une base créée avant l'ajout d'une colonne, sans rien effacer."""
+    columns = [r["name"] for r in conn.execute("PRAGMA table_info(companies)")]
+    if "is_fictional" not in columns:
+        conn.execute("ALTER TABLE companies ADD COLUMN is_fictional INTEGER NOT NULL DEFAULT 0")
+
+
 def init(conn):
     conn.executescript(SCHEMA)
+    _add_missing_columns(conn)
     conn.commit()
     return conn

@@ -4,9 +4,13 @@ import argparse
 import json
 import os
 
-from . import api, db, sec, seed, views
+from . import api, db, reports, sec, seed, views
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
+
+
+def calc_n(x):
+    return ("%.0f" % x) if float(x).is_integer() else ("%s" % x)
 
 
 def export_demo(conn, out_path):
@@ -47,6 +51,9 @@ def main(argv=None):
     s.add_argument("--port", type=int, default=8000)
     s = sub.add_parser("export-demo", help="écrit une page autonome")
     s.add_argument("--out", default=os.path.join(ROOT, "dist", "demo.html"))
+    s = sub.add_parser("reports", help="liste les signalements d'erreur reçus")
+    s.add_argument("--all", action="store_true",
+                   help="inclure aussi les signalements déjà traités")
     args = p.parse_args(argv)
 
     if args.cmd == "serve":
@@ -65,6 +72,18 @@ def main(argv=None):
     elif args.cmd == "show":
         print(json.dumps(views.company_view(conn, args.ticker, args.as_of),
                          ensure_ascii=False, indent=2))
+    elif args.cmd == "reports":
+        rows = reports.list_reports(conn, None if args.all else reports.OPEN)
+        if not rows:
+            print("Aucun signalement.")
+        for r in rows:
+            print("n° %d · %s · %s · %s %s, période finissant le %s, valeur %s %s" % (
+                r["id"], r["created_at"], r["status"], r["ticker"], r["metric"],
+                r["period_end"], calc_n(r["value"]), r["unit"]))
+            if r["about"]:
+                print("    Affiché : %s" % r["about"])
+            print("    Message : %s" % r["message"])
+            print("    Source  : %s" % r["source_url"])
     elif args.cmd == "export-demo":
         export_demo(conn, args.out)
         print("Page écrite : %s" % args.out)

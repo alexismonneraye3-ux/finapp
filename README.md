@@ -19,6 +19,7 @@ Autres commandes :
 
 ```
 python3 -m finapp show NVDA --as-of 2026-06-01    # la fiche telle que connue à cette date
+python3 -m finapp reports                         # les signalements d'erreur reçus
 python3 -m finapp export-demo                     # écrit dist/demo.html, page autonome
 python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli contact@exemple.com"
 ```
@@ -34,11 +35,12 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 | `finapp/charts.py` | Données des graphiques : séries, axe et graduations ; l'écran ne fait que dessiner |
 | `finapp/health.py` | Bloc « Santé » du mode Essentiel : cinq indicateurs, une phrase modèle chacun |
 | `finapp/promises.py` | Verdict de chaque prévision, habitude de l'entreprise, ruptures d'habitude |
+| `finapp/reports.py` | Signalements d'erreur envoyés par les lecteurs : stockage et liste |
 | `finapp/views.py` | Assemble la fiche d'une société : chiffre d'affaires par trimestre et par exercice, marges par trimestre, promesses |
-| `finapp/api.py` | API JSON (`/api/companies`, `/api/company/<ticker>?as_of=AAAA-MM-JJ`) et service de l'écran |
+| `finapp/api.py` | API JSON (`/api/companies`, `/api/company/<ticker>?as_of=AAAA-MM-JJ`, envoi d'un signalement sur `/api/report`) et service de l'écran |
 | `web/index.html` | Écran unique, modes Essentiel et Pro, téléphone et ordinateur |
 | `fixtures/` | Jeu d'exemple Nvidia |
-| `tests/` | 120 tests automatiques |
+| `tests/` | 139 tests automatiques |
 | `.github/workflows/tests.yml` | Lance tous les tests sur GitHub à chaque proposition |
 
 ## Les trois règles du socle
@@ -61,6 +63,9 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
   arrondis, avec des dates de période et de dépôt approximatives. La prévision
   du T4 exercice 2026 est reconstituée à partir d'un article. L'écran les
   signale comme telles.
+- **Signalements sans garde-fou de volume.** Le bouton « Signaler une
+  erreur » enregistre le message tel quel. Rien ne limite encore le nombre
+  d'envois par personne (tâche 13.2, à faire avant toute ouverture au public).
 - **Bloc « Santé » incomplet.** Le mode Essentiel décrit la croissance, la
   rentabilité et les promesses tenues. La dette et la trésorerie affichent
   « pas encore dans nos données » : il faut d'abord charger le bilan et les

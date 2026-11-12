@@ -57,6 +57,17 @@ CREATE TABLE IF NOT EXISTS promises (
     is_deduced     INTEGER NOT NULL DEFAULT 0,  -- 1 = reconstituée, pas lue à la source
     UNIQUE (company_id, metric, period_end, stated_at)
 );
+
+-- Un lecteur signale qu'un chiffre lui paraît faux. Rien n'est corrigé
+-- automatiquement : une personne traite le signalement.
+CREATE TABLE IF NOT EXISTS error_reports (
+    id          INTEGER PRIMARY KEY,
+    fact_id     INTEGER NOT NULL REFERENCES facts(id),
+    about       TEXT NOT NULL DEFAULT '',   -- ce que l'écran affichait
+    message     TEXT NOT NULL,
+    created_at  TEXT NOT NULL,              -- AAAA-MM-JJTHH:MM:SSZ (UTC)
+    status      TEXT NOT NULL DEFAULT 'ouvert'
+);
 """
 
 

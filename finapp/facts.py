@@ -66,7 +66,8 @@ def add_fact(conn, company_id, metric, period_start, period_end, value, unit,
 
 
 _SELECT = """
-SELECT f.*, s.url AS source_url, s.title AS source_title, s.kind AS source_kind
+SELECT f.*, s.url AS source_url, s.title AS source_title, s.kind AS source_kind,
+       s.published_at AS source_published_at
 FROM facts f JOIN sources s ON s.id = f.source_id
 """
 
@@ -117,5 +118,6 @@ def fact_dict(row):
             "url": row["source_url"],
             "title": row["source_title"],
             "kind": row["source_kind"],
+            "published_at": row["source_published_at"],
         },
     }

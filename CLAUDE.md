@@ -7,7 +7,8 @@ en français simple, sans jargon.
 
 ## À lire avant de coder
 
-1. `docs/vision.md` : ce qu'on construit et les règles qui ne se
+1. `docs/strategie.md` (l'ordre et le pourquoi) et `docs/vision.md` : ce
+   qu'on construit et les règles qui ne se
    négocient pas.
 2. `TACHES.md` : quoi faire, dans quel ordre.
 3. Le fichier de `docs/specifications/` cité par la tâche. Il fait foi :

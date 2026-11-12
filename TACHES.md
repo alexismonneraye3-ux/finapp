@@ -13,6 +13,22 @@ Si une tâche est trop grosse pour une seule proposition, l'agent la
 découpe : il fait la première partie et ajoute les suivantes juste en
 dessous.
 
+## Ordre de passage : jalon 1 d'abord
+
+La stratégie (`docs/strategie.md`) fixe un premier jalon : un site public
+de 100 sociétés réelles avec leurs comptes sourcés et leur mémoire des
+promesses. **L'agent suit d'abord cette liste, dans cet ordre**, en
+prenant la première tâche non cochée. Quand toute la liste est cochée, il
+reprend les phases dans l'ordre du fichier.
+
+1. Fiche lisible : 1.1, 1.2, 1.3, 1.12, 1.14, 1.15
+2. Plusieurs sociétés : 2.1, 2.2, 2.3, 2.4, 2.5
+3. Données réelles : 3.1, 3.2, 3.3, 3.4, 3.8, 3.9, 3.12
+4. Promesses à grande échelle : 4.1, 4.2, 4.5, 4.6, 4.7, 4.8, 4.9
+5. Deux langues : 10.1, 10.2, 10.3
+6. Site public : 12.1, 12.2, 12.3, 12.4, 12.7, 12.8, 12.9
+7. Présentable : 2.6, 13.1
+
 ## Décisions du propriétaire
 
 L'agent ne traite pas ces lignes. Il les rappelle dans ses résumés quand
@@ -204,6 +220,9 @@ Référence : `03-ecrans.md` section 5, `08` section 2.
 - [ ] 12.4 — Mention « Information, pas conseil » sur chaque écran ; test qui vérifie sa présence.
 - [ ] 12.5 — Emplacements de liens partenaires, marqués « partenaire rémunéré », désactivés par défaut.
 - [ ] 12.6 — Page d'état : fraîcheur de chaque source, dernier passage de collecte.
+- [ ] 12.7 — Page d'accueil publique : la promesse en une phrase, trois exemples de fiches, formulaire de liste d'attente (adresse stockée en base, route d'API, validation, aucune autre donnée). Tests.
+- [ ] 12.8 — Commande de contrôle par tirage : tirer 200 chiffres au hasard et produire une feuille de vérification (valeur, période, lien du document) à contrôler à la main ; enregistrer le résultat du contrôle. Tests.
+- [ ] 12.9 — Guide d'entretien utilisateurs dans `docs/` : dix questions pour débutants et dix pour investisseurs avancés, grille de notes, en français simple.
 
 ## Phase 13 — Comptes et sécurité
 

@@ -38,9 +38,9 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 | `finapp/reports.py` | Signalements d'erreur envoyés par les lecteurs : stockage et liste |
 | `finapp/views.py` | Assemble la fiche d'une société : chiffre d'affaires par trimestre et par exercice, marges par trimestre, promesses |
 | `finapp/api.py` | API JSON (`/api/companies`, `/api/company/<ticker>?as_of=AAAA-MM-JJ`, envoi d'un signalement sur `/api/report`) et service de l'écran |
-| `web/index.html` | Écran unique, modes Essentiel et Pro, téléphone et ordinateur |
+| `web/index.html` | Écran : accueil, fiche société (`#/societe/NVDA`, ou `#/societe/NVDA/2026-06-01` pour une date), modes Essentiel et Pro, téléphone et ordinateur |
 | `fixtures/` | Jeux d'exemple : Nvidia (chiffres arrondis de communiqués) et deux sociétés inventées, ZBOR (en perte) et ZQUE (exercice décalé, capitaux propres négatifs) |
-| `tests/` | 153 tests automatiques |
+| `tests/` | 159 tests automatiques |
 | `.github/workflows/tests.yml` | Lance tous les tests sur GitHub à chaque proposition |
 
 ## Les trois règles du socle

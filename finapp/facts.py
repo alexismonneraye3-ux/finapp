@@ -17,12 +17,13 @@ def period_type(period_start, period_end):
     return "other"
 
 
-def upsert_company(conn, ticker, name, cik=None):
+def upsert_company(conn, ticker, name, cik=None, is_fictional=False):
     conn.execute(
-        "INSERT INTO companies (ticker, name, cik) VALUES (?, ?, ?) "
+        "INSERT INTO companies (ticker, name, cik, is_fictional) VALUES (?, ?, ?, ?) "
         "ON CONFLICT(ticker) DO UPDATE SET name = excluded.name, "
-        "cik = COALESCE(excluded.cik, companies.cik)",
-        (ticker.upper(), name, cik),
+        "cik = COALESCE(excluded.cik, companies.cik), "
+        "is_fictional = excluded.is_fictional",
+        (ticker.upper(), name, cik, 1 if is_fictional else 0),
     )
     return get_company(conn, ticker)["id"]
 

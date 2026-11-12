@@ -38,7 +38,7 @@ def main(argv=None):
                    help="chemin de la base SQLite")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init", help="crée la base")
-    sub.add_parser("seed", help="charge le jeu d'exemple Nvidia")
+    sub.add_parser("seed", help="charge les jeux d'exemple")
     s = sub.add_parser("ingest-sec", help="collecte les comptes d'une société à la SEC")
     s.add_argument("--cik", required=True)
     s.add_argument("--ticker", required=True)

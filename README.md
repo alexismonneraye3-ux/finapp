@@ -10,7 +10,7 @@ Aucune dépendance à installer : Python 3.10 ou plus récent suffit.
 ## Démarrer
 
 ```
-python3 -m finapp seed          # charge l'exemple Nvidia
+python3 -m finapp seed          # charge les trois jeux d'exemple
 python3 -m finapp serve         # ouvre l'appli sur http://127.0.0.1:8000
 python3 -m unittest discover tests
 ```
@@ -39,8 +39,8 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 | `finapp/views.py` | Assemble la fiche d'une société : chiffre d'affaires par trimestre et par exercice, marges par trimestre, promesses |
 | `finapp/api.py` | API JSON (`/api/companies`, `/api/company/<ticker>?as_of=AAAA-MM-JJ`, envoi d'un signalement sur `/api/report`) et service de l'écran |
 | `web/index.html` | Écran unique, modes Essentiel et Pro, téléphone et ordinateur |
-| `fixtures/` | Jeu d'exemple Nvidia |
-| `tests/` | 139 tests automatiques |
+| `fixtures/` | Jeux d'exemple : Nvidia (chiffres arrondis de communiqués) et deux sociétés inventées, ZBOR (en perte) et ZQUE (exercice décalé, capitaux propres négatifs) |
+| `tests/` | 153 tests automatiques |
 | `.github/workflows/tests.yml` | Lance tous les tests sur GitHub à chaque proposition |
 
 ## Les trois règles du socle
@@ -63,6 +63,11 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
   arrondis, avec des dates de période et de dépôt approximatives. La prévision
   du T4 exercice 2026 est reconstituée à partir d'un article. L'écran les
   signale comme telles.
+- **Deux sociétés inventées.** Atelier Boréal (ZBOR) et Maison Quenelle
+  (ZQUE) n'existent pas. Elles servent à montrer une perte, un exercice
+  décalé et des capitaux propres négatifs. Leurs chiffres sont inventés,
+  leurs liens de source ne mènent nulle part, et l'écran le dit dans un
+  bandeau.
 - **Signalements sans garde-fou de volume.** Le bouton « Signaler une
   erreur » enregistre le message tel quel. Rien ne limite encore le nombre
   d'envois par personne (tâche 13.2, à faire avant toute ouverture au public).

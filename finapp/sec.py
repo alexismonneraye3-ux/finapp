@@ -22,6 +22,7 @@ TAGS = {
     "gross_profit": ["GrossProfit"],
     "operating_income": ["OperatingIncomeLoss"],
     "net_income": ["NetIncomeLoss"],
+    "equity": ["StockholdersEquity"],
     "eps_diluted": ["EarningsPerShareDiluted"],
 }
 
@@ -51,7 +52,7 @@ def filing_url(cik, accession):
 
 def parse_companyfacts(doc):
     """Transforme un fichier companyfacts en lignes prêtes à stocker."""
-    cik = doc["cik"]
+    cik = doc.get("cik")
     gaap = doc.get("facts", {}).get("us-gaap", {})
     rows = []
     for metric, tags in TAGS.items():
@@ -61,6 +62,8 @@ def parse_companyfacts(doc):
                     if "end" not in e or "val" not in e or "filed" not in e:
                         continue
                     accn = e.get("accn", "")
+                    if not e.get("_url") and (cik is None or not accn):
+                        continue  # sans document d'origine, pas de fait
                     rows.append({
                         "metric": metric,
                         "period_start": e.get("start", ""),
@@ -83,7 +86,8 @@ def ingest(conn, doc, ticker, is_sample=False):
     étiquettes donnent la même période à la même date, la première gagne.
     """
     company_id = facts.upsert_company(
-        conn, ticker, doc.get("entityName", ticker), facts_cik(doc))
+        conn, ticker, doc.get("entityName", ticker), facts_cik(doc),
+        is_fictional=bool(doc.get("_fictional")))
     added = 0
     for r in parse_companyfacts(doc):
         source_id = facts.add_source(

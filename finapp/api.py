@@ -19,7 +19,8 @@ def route(conn, path, query):
         return 400, {"error": "as_of doit être au format AAAA-MM-JJ"}
 
     if path == "/api/companies":
-        return 200, [{"ticker": c["ticker"], "name": c["name"]}
+        return 200, [{"ticker": c["ticker"], "name": c["name"],
+                      "is_fictional": bool(c["is_fictional"])}
                      for c in facts.list_companies(conn)]
 
     m = re.match(r"^/api/company/([A-Za-z0-9.\-]{1,12})$", path)

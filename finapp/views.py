@@ -10,6 +10,47 @@ def fiscal_label(row):
     return row["period_end"]
 
 
+MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+          "août", "septembre", "octobre", "novembre", "décembre"]
+
+
+def french_date(iso):
+    """« 2026-01-25 » devient « 25 janvier 2026 »."""
+    year, month, day = iso[:10].split("-")
+    return "%d %s %s" % (int(day), MONTHS[int(month) - 1], year)
+
+
+def annual_label(row):
+    """Libellé d'un exercice, tiré de sa date de fin.
+
+    Le champ « exercice » fourni par la SEC est celui du document déposé,
+    pas celui de la période : un rapport annuel qui rappelle les deux
+    exercices précédents les étiquette tous avec son propre millésime.
+    La date de clôture, elle, ne trompe jamais.
+    """
+    return "Exercice clos le %s" % french_date(row["period_end"])
+
+
+def annual_revenue(conn, company_id, as_of=None):
+    """Chiffre d'affaires par exercice, avec la variation sur un an.
+
+    La variation n'est calculée que si l'exercice précédent est présent et
+    suit immédiatement : un trou dans la série donne None, jamais une
+    comparaison avec un exercice plus ancien.
+    """
+    out, prev = [], None
+    for row in facts.series(conn, company_id, "revenue", as_of, period_type="year"):
+        item = facts.fact_dict(row)
+        item["fiscal_label"] = annual_label(row)
+        item["growth"] = (calc.growth(row, prev)
+                          if prev is not None and calc.consecutive(prev, row) else None)
+        item["previous"] = (facts.fact_dict(prev)
+                            if item["growth"] is not None else None)
+        out.append(item)
+        prev = row
+    return out
+
+
 def timeline(conn, company_id):
     """Dates auxquelles une information nouvelle est devenue connue."""
     rows = conn.execute(
@@ -76,6 +117,8 @@ def company_view(conn, ticker, as_of=None):
         line[key]["numerator"] is not None and line[key]["numerator"]["is_sample"]
         for line in margin_lines for key, _n, _m in MARGINS)
 
+    revenue_annual = annual_revenue(conn, cid, as_of)
+
     items = promises.evaluate(conn, cid, "revenue", as_of)
     return {
         "company": {"ticker": company["ticker"], "name": company["name"],
@@ -83,11 +126,13 @@ def company_view(conn, ticker, as_of=None):
         "as_of": as_of,
         "timeline": timeline(conn, cid),
         "revenue": revenue,
+        "revenue_annual": revenue_annual,
         "margins": margin_lines,
         "promises": {
             "items": items,
             "profile": promises.profile(items),
             "unusual": promises.unusual(items),
         },
-        "has_sample_data": any(f["is_sample"] for f in revenue) or margin_sample,
+        "has_sample_data": (any(f["is_sample"] for f in revenue + revenue_annual)
+                            or margin_sample),
     }

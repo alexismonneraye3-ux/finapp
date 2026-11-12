@@ -288,6 +288,123 @@ class MarginsInView(unittest.TestCase):
         self.assertIn("marginInfo", html)
 
 
+class AnnualRevenue(unittest.TestCase):
+    """Chiffre d'affaires par exercice. Société et chiffres inventés pour le test."""
+
+    Y1 = ("2023-01-01", "2023-12-31")
+    Y2 = ("2024-01-01", "2024-12-31")
+    Y3 = ("2025-01-01", "2025-12-31")
+
+    def setUp(self):
+        self.conn = fresh()
+        self.cid = facts.upsert_company(self.conn, "tst", "Test SA")
+        self.s1 = facts.add_source(self.conn, "sec_filing", "https://ex.test/k23", "10-K 2023", "2024-02-15")
+        self.s2 = facts.add_source(self.conn, "sec_filing", "https://ex.test/k24", "10-K 2024", "2025-02-15")
+        self.add(self.Y1, 400, self.s1, "2024-02-15")
+        self.add(self.Y2, 500, self.s2, "2025-02-15")
+
+    def add(self, period, value, source, known_at, **kw):
+        facts.add_fact(self.conn, self.cid, "revenue", period[0], period[1], value,
+                       "USD", source, known_at, **kw)
+
+    def annual(self, as_of=None):
+        return views.company_view(self.conn, "TST", as_of)["revenue_annual"]
+
+    def test_one_line_per_year_with_growth(self):
+        y1, y2 = self.annual()
+        self.assertEqual((y1["value"], y2["value"]), (400, 500))
+        self.assertIsNone(y1["growth"])
+        self.assertAlmostEqual(y2["growth"]["value"], 25.0)
+        self.assertEqual(y2["growth"]["formula"], "(500 − 400) ÷ 400 × 100")
+
+    def test_growth_carries_both_facts_and_sources(self):
+        y2 = self.annual()[1]
+        self.assertEqual(y2["growth"]["input_fact_ids"], [y2["id"], y2["previous"]["id"]])
+        self.assertEqual(y2["source"]["url"], "https://ex.test/k24")
+        self.assertEqual(y2["previous"]["source"]["url"], "https://ex.test/k23")
+        self.assertEqual(y2["previous"]["known_at"], "2024-02-15")
+
+    def test_first_year_has_no_previous(self):
+        self.assertIsNone(self.annual()[0]["previous"])
+
+    def test_label_comes_from_closing_date(self):
+        self.assertEqual(self.annual()[1]["fiscal_label"],
+                         "Exercice clos le 31 décembre 2024")
+
+    def test_missing_year_gives_no_growth(self):
+        """Un trou dans la série : pas de comparaison avec un exercice plus ancien."""
+        conn = fresh()
+        cid = facts.upsert_company(conn, "tst", "Test SA")
+        s = facts.add_source(conn, "sec_filing", "https://ex.test/k", "10-K")
+        facts.add_fact(conn, cid, "revenue", *self.Y1, 400, "USD", s, "2024-02-15")
+        facts.add_fact(conn, cid, "revenue", *self.Y3, 700, "USD", s, "2026-02-15")
+        y1, y3 = views.company_view(conn, "TST")["revenue_annual"]
+        self.assertIsNone(y3["growth"])
+        self.assertIsNone(y3["previous"])
+
+    def test_zero_previous_year_gives_no_growth(self):
+        self.add(self.Y3, 700, self.s2, "2026-02-15")
+        s = facts.add_source(self.conn, "sec_filing", "https://ex.test/k24a", "10-K/A")
+        self.add(self.Y2, 0, s, "2026-02-15")
+        self.assertIsNone(self.annual()[2]["growth"])
+
+    def test_decline_is_negative(self):
+        self.add(self.Y3, 450, self.s2, "2026-02-15")
+        self.assertAlmostEqual(self.annual()[2]["growth"]["value"], -10.0)
+
+    def test_as_of_uses_only_what_was_known(self):
+        """Exercice 2023 révisé plus tard : avant la révision, on voit l'ancien chiffre."""
+        s = facts.add_source(self.conn, "sec_filing", "https://ex.test/k23a", "10-K/A 2023")
+        self.add(self.Y1, 320, s, "2025-06-01")
+        self.assertEqual(len(self.annual("2024-12-31")), 1)
+        self.assertAlmostEqual(self.annual("2025-03-01")[1]["growth"]["value"], 25.0)
+        after = self.annual()[1]
+        self.assertAlmostEqual(after["growth"]["value"], 56.25)
+        self.assertEqual(after["previous"]["source"]["url"], "https://ex.test/k23a")
+
+    def test_quarters_and_years_do_not_mix(self):
+        s = facts.add_source(self.conn, "sec_filing", "https://ex.test/q", "10-Q")
+        facts.add_fact(self.conn, self.cid, "revenue", "2025-01-01", "2025-03-31",
+                       130, "USD", s, "2025-05-01")
+        view = views.company_view(self.conn, "TST")
+        self.assertEqual([f["value"] for f in view["revenue_annual"]], [400, 500])
+        self.assertEqual([f["value"] for f in view["revenue"]], [130])
+
+    def test_sample_year_flags_the_view(self):
+        self.assertFalse(views.company_view(self.conn, "TST")["has_sample_data"])
+        self.add(self.Y3, 700, self.s2, "2026-02-15", is_sample=True)
+        self.assertTrue(views.company_view(self.conn, "TST")["has_sample_data"])
+
+    def test_sec_fiscal_year_of_the_filing_does_not_mislabel(self):
+        """Format SEC : un rapport annuel rappelle l'exercice précédent avec son
+        propre millésime (fy). Le libellé doit suivre la date de clôture."""
+        doc = {"cik": 999, "entityName": "Inventée SA", "facts": {"us-gaap": {"Revenues": {"units": {"USD": [
+            {"start": "2023-01-01", "end": "2023-12-31", "val": 400, "fy": 2023,
+             "fp": "FY", "form": "10-K", "filed": "2024-02-15", "accn": "0000000999-24-000001"},
+            {"start": "2023-01-01", "end": "2023-12-31", "val": 400, "fy": 2024,
+             "fp": "FY", "form": "10-K", "filed": "2025-02-15", "accn": "0000000999-25-000001"},
+            {"start": "2024-01-01", "end": "2024-12-31", "val": 500, "fy": 2024,
+             "fp": "FY", "form": "10-K", "filed": "2025-02-15", "accn": "0000000999-25-000001"},
+        ]}}}}}
+        conn = fresh()
+        sec.ingest(conn, doc, "INV")
+        y1, y2 = views.company_view(conn, "INV")["revenue_annual"]
+        self.assertEqual(y1["fiscal_label"], "Exercice clos le 31 décembre 2023")
+        self.assertEqual(y2["fiscal_label"], "Exercice clos le 31 décembre 2024")
+        self.assertAlmostEqual(y2["growth"]["value"], 25.0)
+
+    def test_api_and_demo_page_include_annual_revenue(self):
+        code, body = api.route(self.conn, "/api/company/tst", {})
+        self.assertEqual(code, 200)
+        self.assertAlmostEqual(body["revenue_annual"][1]["growth"]["value"], 25.0)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "demo.html")
+            export_demo(self.conn, out)
+            html = open(out, encoding="utf-8").read()
+        self.assertIn("Chiffre d\\'affaires annuel", html)
+        self.assertIn('"revenue_annual"', html)
+
+
 class NvidiaExample(unittest.TestCase):
     """Le jeu d'exemple doit redonner les écarts calculés à la main dans l'étude."""
 
@@ -336,6 +453,10 @@ class NvidiaExample(unittest.TestCase):
                        109.0e9, "USD", s, "2026-11-19", 2027, "Q3")
         flagged = self.view()["promises"]["unusual"]
         self.assertEqual([f["fiscal_label"] for f in flagged], ["T3 exercice 2027"])
+
+    def test_no_annual_revenue_without_published_year(self):
+        """Le jeu d'exemple n'a que des trimestres : aucun chiffre annuel inventé."""
+        self.assertEqual(self.view()["revenue_annual"], [])
 
     def test_margins_not_available_without_published_inputs(self):
         """Le jeu d'exemple n'a que le chiffre d'affaires : aucune marge inventée."""

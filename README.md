@@ -30,13 +30,13 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 | `finapp/db.py` | Schéma SQLite : sociétés, sources, faits, promesses |
 | `finapp/facts.py` | Écriture et lecture des faits, lecture « tel que connu à une date » |
 | `finapp/sec.py` | Collecte et lecture des comptes au format SEC companyfacts |
-| `finapp/calc.py` | Variations, marges, écarts : chaque résultat garde sa formule et ses entrées |
+| `finapp/calc.py` | Variations (sur un trimestre, sur un an), croissance annuelle moyenne, marges, écarts : chaque résultat garde sa formule et ses entrées |
 | `finapp/promises.py` | Verdict de chaque prévision, habitude de l'entreprise, ruptures d'habitude |
 | `finapp/views.py` | Assemble la fiche d'une société : chiffre d'affaires par trimestre et par exercice, marges par trimestre, promesses |
 | `finapp/api.py` | API JSON (`/api/companies`, `/api/company/<ticker>?as_of=AAAA-MM-JJ`) et service de l'écran |
 | `web/index.html` | Écran unique, modes Essentiel et Pro, téléphone et ordinateur |
 | `fixtures/` | Jeu d'exemple Nvidia |
-| `tests/` | 55 tests automatiques |
+| `tests/` | 80 tests automatiques |
 
 ## Les trois règles du socle
 
@@ -58,6 +58,9 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
   arrondis, avec des dates de période et de dépôt approximatives. La prévision
   du T4 exercice 2026 est reconstituée à partir d'un article. L'écran les
   signale comme telles.
+- **Variation sur un an vide dans l'exemple.** Le mode Pro compare chaque
+  trimestre au même trimestre un an plus tôt. Le jeu d'exemple Nvidia n'a que
+  trois trimestres : cette colonne y affiche « non disponible ».
 - **Chiffre d'affaires annuel vide dans l'exemple.** Le mode Pro affiche le
   chiffre d'affaires par exercice et sa variation sur un an. Le jeu d'exemple
   Nvidia ne contient que des trimestres : ce tableau y est donc vide.

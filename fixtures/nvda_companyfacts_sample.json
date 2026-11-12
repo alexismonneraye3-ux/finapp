@@ -1,0 +1,34 @@
+{
+  "_note": "Jeu d'exemple au format SEC companyfacts. Les chiffres d'affaires sont ceux des communiqués de résultats de Nvidia, arrondis au dixième de milliard. Les dates de début et de fin de période et les dates de dépôt sont approximatives. À remplacer par une vraie collecte (commande ingest-sec) avant tout usage réel.",
+  "cik": 1045810,
+  "entityName": "NVIDIA Corporation",
+  "facts": {
+    "us-gaap": {
+      "Revenues": {
+        "label": "Revenues",
+        "units": {
+          "USD": [
+            {
+              "start": "2025-10-27", "end": "2026-01-25", "val": 68100000000,
+              "fy": 2026, "fp": "Q4", "form": "8-K", "filed": "2026-02-25",
+              "accn": "0001045810-26-000019",
+              "_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000019/q4fy26pr.htm"
+            },
+            {
+              "start": "2026-01-26", "end": "2026-04-26", "val": 81600000000,
+              "fy": 2027, "fp": "Q1", "form": "8-K", "filed": "2026-05-27",
+              "accn": "0001045810-26-000051",
+              "_url": "https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000051/q1fy27pr.htm"
+            },
+            {
+              "start": "2026-04-27", "end": "2026-07-26", "val": 96200000000,
+              "fy": 2027, "fp": "Q2", "form": "8-K", "filed": "2026-08-26",
+              "accn": "0001045810-26-000073",
+              "_url": "https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000073/q2fy27pr.htm"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche société</title>
+<style>
+  :root {
+    --bg: #f4f2ee; --card: #ffffff; --ink: #1b1f24; --muted: #626a73;
+    --line: #dedad2; --accent: #0b5d4e; --accent-soft: #e2efec;
+    --warn-bg: #fff4d6; --warn-ink: #6b4e00; --good: #0b6b3a; --bad: #a12a22;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 16px; }
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; margin: 8px -8px 16px; }
+  header.top > * { margin: 8px; }
+  .title { flex: 1 1 240px; min-width: 0; }
+  .title h1 { margin: 0; font-size: 26px; line-height: 1.2; letter-spacing: -0.01em; }
+  .title p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); }
+  .seg button { border: 0; background: none; padding: 9px 16px; font: inherit; color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  label.asof { font-size: 13px; color: var(--muted); display: block; }
+  label.asof select { display: block; margin-top: 2px; font: inherit; font-size: 15px; padding: 7px 8px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); max-width: 100%; }
+  .banner { background: var(--warn-bg); color: var(--warn-ink); border-radius: 10px; padding: 10px 14px; font-size: 14px; margin-bottom: 16px; }
+  .cards { display: flex; flex-wrap: wrap; margin: -8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 8px; flex: 1 1 300px; min-width: 0; }
+  .card.full { flex-basis: 100%; }
+  .card h2 { margin: 0 0 10px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .big { font-size: 40px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  .card p { margin: 8px 0 0; }
+  .muted { color: var(--muted); font-size: 14px; }
+  button.num { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+    border-bottom: 1px dashed var(--accent); font-variant-numeric: tabular-nums; }
+  button.num:hover, button.num:focus { background: var(--accent-soft); outline: none; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: top; }
+  th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td a { color: var(--accent); }
+  td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #ececec; color: #444; }
+  .tag.good { background: #dff2e6; color: var(--good); }
+  .tag.bad { background: #f8dedb; color: var(--bad); }
+  .tag.wait { background: #e6ebf2; color: #37506e; }
+  .note { font-size: 12px; color: var(--muted); }
+  .sheet-bg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(20,24,28,0.45); display: none; align-items: flex-end; justify-content: center; }
+  .sheet-bg.open { display: flex; }
+  .sheet { background: var(--card); width: 100%; max-width: 560px; border-radius: 16px 16px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; }
+  .sheet h3 { margin: 0 0 4px; font-size: 18px; }
+  .sheet dl { margin: 12px 0 0; }
+  .sheet dt { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 12px; }
+  .sheet dd { margin: 2px 0 0; word-wrap: break-word; overflow-wrap: break-word; }
+  .sheet a { color: var(--accent); }
+  .sheet .close { margin-top: 18px; width: 100%; padding: 11px; font: inherit; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); cursor: pointer; }
+  @media (min-width: 700px) { .sheet-bg { align-items: center; } .sheet { border-radius: 16px; } }
+  @media (max-width: 480px) { .big { font-size: 34px; } .title h1 { font-size: 22px; } }
+  .hide { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title">
+      <h1 id="name">Chargement…</h1>
+      <p id="sub"></p>
+    </div>
+    <label class="asof">Vu à la date du
+      <select id="asof"></select>
+    </label>
+    <div class="seg" role="group" aria-label="Niveau de détail">
+      <button type="button" id="m-ess" aria-pressed="true">Essentiel</button>
+      <button type="button" id="m-pro" aria-pressed="false">Pro</button>
+    </div>
+  </header>
+  <div id="banner" class="banner hide"></div>
+  <main id="main" class="cards"></main>
+  <p class="note" style="margin-top:20px">Information, pas conseil en investissement. Chaque chiffre souligné ouvre sa source.</p>
+</div>
+
+<div class="sheet-bg" id="sheet-bg">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <h3 id="sheet-title"></h3>
+    <dl id="sheet-body"></dl>
+    <button type="button" class="close" id="sheet-close">Fermer</button>
+  </div>
+</div>
+
+<script>
+window.__DATA__ = /*__DATA__*/null;
+</script>
+<script>
+(function () {
+  var MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var state = { mode: 'ess', ticker: null, asOf: '', view: null };
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag), k;
+    for (k in (attrs || {})) {
+      if (k === 'text') { n.textContent = attrs[k]; }
+      else if (k === 'onclick') { n.onclick = attrs[k]; }
+      else { n.setAttribute(k, attrs[k]); }
+    }
+    (kids || []).forEach(function (c) {
+      if (c === null || c === undefined) { return; }
+      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return n;
+  }
+  function fr(x, d) { return x.toFixed(d).replace('.', ','); }
+  function money(v) { return fr(v / 1e9, 1) + ' Md$'; }
+  function pct(v) { return (v >= 0 ? '+' : '−') + fr(Math.abs(v), 1) + ' %'; }
+  function day(s) {
+    var p = s.split('-');
+    return parseInt(p[2], 10) + ' ' + MONTHS[parseInt(p[1], 10) - 1] + ' ' + p[0];
+  }
+
+  /* Tout chiffre affiché passe par ici : il devient un bouton qui ouvre sa source. */
+  function num(label, info) {
+    return el('button', { type: 'button', 'class': 'num', text: label,
+      onclick: function () { openSheet(info); } });
+  }
+  function factInfo(f, title) {
+    return { title: title, rows: [
+      ['Valeur', money(f.value) + (f.is_sample ? ' (exemple arrondi)' : '')],
+      ['Période', (f.period_start ? 'du ' + day(f.period_start) + ' ' : '') + 'au ' + day(f.period_end)],
+      ['Connu depuis le', day(f.known_at)],
+      ['Source', f.source]
+    ] };
+  }
+  function growthInfo(g, title) {
+    return { title: title, rows: [
+      ['Résultat', pct(g.value)],
+      ['Calcul', g.formula],
+      ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
+    ] };
+  }
+  function promiseInfo(p) {
+    var range = (p.low !== null && p.high !== null)
+      ? 'de ' + money(p.low) + ' à ' + money(p.high) : 'non précisée';
+    return { title: 'Prévision pour ' + p.fiscal_label, rows: [
+      ['Valeur annoncée', money(p.mid) + (p.is_deduced ? ' (reconstituée, non lue à la source)' : '')],
+      ['Fourchette', range],
+      ['Annoncée le', day(p.stated_at)],
+      ['Source', p.source]
+    ] };
+  }
+  function gapInfo(p) {
+    return { title: 'Écart pour ' + p.fiscal_label, rows: [
+      ['Résultat', pct(p.gap_pct)],
+      ['Calcul', '(' + money(p.actual.value) + ' − ' + money(p.mid) + ') ÷ ' + money(p.mid) + ' × 100'],
+      ['Méthode', 'Publié comparé à la valeur centrale annoncée, calculé par du code, sans IA.']
+    ] };
+  }
+
+  function openSheet(info) {
+    document.getElementById('sheet-title').textContent = info.title;
+    var body = document.getElementById('sheet-body');
+    body.innerHTML = '';
+    info.rows.forEach(function (r) {
+      body.appendChild(el('dt', { text: r[0] }));
+      if (typeof r[1] === 'string') { body.appendChild(el('dd', { text: r[1] })); }
+      else {
+        body.appendChild(el('dd', {}, [
+          el('a', { href: r[1].url, target: '_blank', rel: 'noopener', text: r[1].title })
+        ]));
+      }
+    });
+    document.getElementById('sheet-bg').className = 'sheet-bg open';
+    document.getElementById('sheet-close').focus();
+  }
+  function closeSheet() { document.getElementById('sheet-bg').className = 'sheet-bg'; }
+
+  function statusTag(s) {
+    var cls = s === 'en attente' ? 'wait' : (s === 'manquée' ? 'bad' : 'good');
+    return el('span', { 'class': 'tag ' + cls, text: s });
+  }
+  function card(title, kids, full) {
+    return el('section', { 'class': 'card' + (full ? ' full' : '') },
+      [el('h2', { text: title })].concat(kids));
+  }
+
+  function renderEssentiel(v, main) {
+    var rev = v.revenue, last = rev[rev.length - 1], name = v.company.name;
+    if (!last) {
+      main.appendChild(card('Chiffre d\'affaires', [el('p', { text: 'Aucun chiffre publié à cette date.' })]));
+    } else {
+      var kids = [
+        el('div', { 'class': 'big' }, [num(money(last.value), factInfo(last, 'Chiffre d\'affaires, ' + last.fiscal_label))]),
+        el('p', { 'class': 'muted', text: 'Ventes du dernier trimestre publié (' + last.fiscal_label + ').' })
+      ];
+      if (last.growth) {
+        kids.push(el('p', {}, [
+          'Soit ', num(pct(last.growth.value), growthInfo(last.growth, 'Variation sur un trimestre')),
+          ' par rapport au trimestre précédent.'
+        ]));
+      }
+      main.appendChild(card('Combien l\'entreprise vend', kids));
+    }
+
+    var pr = v.promises.profile, items = v.promises.items, kids2 = [];
+    if (pr.evaluated === 0) {
+      kids2.push(el('p', { text: 'Pas encore de promesse vérifiable à cette date.' }));
+    } else {
+      kids2.push(el('div', { 'class': 'big', text: pr.kept + ' sur ' + pr.evaluated }));
+      kids2.push(el('p', { 'class': 'muted', text: 'prévisions de ventes atteintes ou dépassées.' }));
+      kids2.push(el('p', { text: 'En moyenne, ' + name + ' a publié ' + pct(pr.mean_gap_pct) +
+        ' par rapport à ce qu\'elle avait annoncé.' }));
+    }
+    var pending = items.filter(function (i) { return i.status === 'en attente'; });
+    if (pending.length) {
+      var p = pending[pending.length - 1];
+      kids2.push(el('p', {}, [
+        'Prochaine promesse à vérifier : ', num(money(p.mid), promiseInfo(p)), ' pour ' + p.fiscal_label + '.'
+      ]));
+    }
+    main.appendChild(card('Tient-elle ses promesses ?', kids2));
+
+    main.appendChild(card('Comment lire cela', [
+      el('p', { text: 'Avant chaque trimestre, la direction annonce le chiffre d\'affaires qu\'elle vise. ' +
+        'On compare ensuite ce chiffre à celui réellement publié. Une entreprise qui dépasse toujours sa ' +
+        'prévision du même écart n\'apprend rien de nouveau au marché ; ce qui compte, c\'est quand l\'écart change.' })
+    ], true));
+  }
+
+  function renderPro(v, main) {
+    var t1 = el('table', {}, [el('thead', {}, [el('tr', {}, [
+      el('th', { text: 'Période' }), el('th', { 'class': 'r', text: 'Chiffre d\'affaires' }),
+      el('th', { 'class': 'r', text: 'Var. trimestre' }), el('th', { text: 'Connu depuis' }),
+      el('th', { text: 'Source' })
+    ])])]);
+    var b1 = el('tbody');
+    v.revenue.forEach(function (f) {
+      b1.appendChild(el('tr', {}, [
+        el('td', { text: f.fiscal_label }),
+        el('td', { 'class': 'r' }, [num(money(f.value), factInfo(f, 'Chiffre d\'affaires, ' + f.fiscal_label))]),
+        el('td', { 'class': 'r' }, [f.growth ? num(pct(f.growth.value), growthInfo(f.growth, 'Variation sur un trimestre')) : '—']),
+        el('td', { text: day(f.known_at) }),
+        el('td', {}, [el('a', { href: f.source.url, target: '_blank', rel: 'noopener', text: f.source.title })])
+      ]));
+    });
+    t1.appendChild(b1);
+    main.appendChild(card('Chiffre d\'affaires trimestriel', [el('div', { 'class': 'scroll' }, [t1])], true));
+
+    var t2 = el('table', {}, [el('thead', {}, [el('tr', {}, [
+      el('th', { text: 'Période' }), el('th', { 'class': 'r', text: 'Annoncé' }),
+      el('th', { 'class': 'r', text: 'Fourchette' }), el('th', { 'class': 'r', text: 'Publié' }),
+      el('th', { 'class': 'r', text: 'Écart' }), el('th', { text: 'Verdict' }),
+      el('th', { text: 'Annoncé le' })
+    ])])]);
+    var b2 = el('tbody');
+    v.promises.items.forEach(function (p) {
+      b2.appendChild(el('tr', {}, [
+        el('td', { text: p.fiscal_label }),
+        el('td', { 'class': 'r' }, [num(money(p.mid) + (p.is_deduced ? ' *' : ''), promiseInfo(p))]),
+        el('td', { 'class': 'r', text: (p.low !== null && p.high !== null) ? fr(p.low / 1e9, 1) + ' – ' + fr(p.high / 1e9, 1) : '—' }),
+        el('td', { 'class': 'r' }, [p.actual ? num(money(p.actual.value), factInfo(p.actual, 'Chiffre d\'affaires, ' + p.fiscal_label)) : '—']),
+        el('td', { 'class': 'r' }, [p.gap_pct !== null ? num(pct(p.gap_pct), gapInfo(p)) : '—']),
+        el('td', {}, [statusTag(p.status)]),
+        el('td', { text: day(p.stated_at) })
+      ]));
+    });
+    t2.appendChild(b2);
+    var kids = [el('div', { 'class': 'scroll' }, [t2])];
+    if (v.promises.items.some(function (p) { return p.is_deduced; })) {
+      kids.push(el('p', { 'class': 'note', text: '* Prévision reconstituée à partir d\'un article, non lue dans le document d\'origine.' }));
+    }
+    main.appendChild(card('Mémoire des promesses', kids, true));
+
+    var pr = v.promises.profile, prof = [];
+    if (pr.evaluated === 0) { prof.push(el('p', { text: 'Aucune promesse dénouée à cette date.' })); }
+    else {
+      prof.push(el('div', { 'class': 'big', text: pct(pr.mean_gap_pct) }));
+      prof.push(el('p', { 'class': 'muted', text: 'écart moyen entre publié et annoncé, sur ' + pr.evaluated + ' trimestre' + (pr.evaluated > 1 ? 's' : '') + '.' }));
+      prof.push(el('p', { text: fr(pr.kept_rate, 0) + ' % des prévisions atteintes ou dépassées ; ' + pr.pending + ' en attente.' }));
+    }
+    main.appendChild(card('Habitude de la direction', prof));
+
+    var un = v.promises.unusual, sig = [];
+    if (!un.length) {
+      sig.push(el('p', { text: 'Aucun résultat ne s\'écarte de l\'habitude de plus de 3 points.' }));
+    } else {
+      un.forEach(function (u) {
+        sig.push(el('p', { text: u.fiscal_label + ' : écart de ' + pct(u.gap_pct) + ' contre une habitude de ' + pct(u.habit_pct) + '.' }));
+      });
+    }
+    sig.push(el('p', { 'class': 'note', text: 'Il faut au moins deux trimestres dénoués avant de juger.' }));
+    main.appendChild(card('Ruptures d\'habitude', sig));
+  }
+
+  function render() {
+    var v = state.view, main = document.getElementById('main');
+    main.innerHTML = '';
+    document.getElementById('name').textContent = v.company.name;
+    document.getElementById('sub').textContent = v.company.ticker +
+      (state.asOf ? ' · tel que connu le ' + day(state.asOf) : ' · dernières données connues');
+    document.title = v.company.name + ' · Fiche société';
+    var banner = document.getElementById('banner');
+    if (v.has_sample_data) {
+      banner.textContent = 'Données d\'exemple : chiffres tirés des communiqués de l\'entreprise, arrondis, avec des dates approximatives. Ce n\'est pas un flux en direct.';
+      banner.className = 'banner';
+    } else { banner.className = 'banner hide'; }
+    if (state.mode === 'ess') { renderEssentiel(v, main); } else { renderPro(v, main); }
+    document.getElementById('m-ess').setAttribute('aria-pressed', state.mode === 'ess' ? 'true' : 'false');
+    document.getElementById('m-pro').setAttribute('aria-pressed', state.mode === 'pro' ? 'true' : 'false');
+  }
+
+  function fillDates(v) {
+    var sel = document.getElementById('asof');
+    if (sel.options.length) { return; }
+    sel.appendChild(el('option', { value: '', text: 'Aujourd\'hui' }));
+    v.timeline.slice().reverse().forEach(function (d) {
+      sel.appendChild(el('option', { value: d, text: day(d) }));
+    });
+  }
+
+  function getJSON(url, done) {
+    var x = new XMLHttpRequest();
+    x.open('GET', url);
+    x.onload = function () {
+      if (x.status === 200) { done(JSON.parse(x.responseText)); } else { fail(); }
+    };
+    x.onerror = fail;
+    x.send();
+  }
+  function fail() {
+    document.getElementById('name').textContent = 'Données indisponibles';
+    document.getElementById('sub').textContent = 'Le serveur ne répond pas. Réessayez dans un instant.';
+  }
+
+  function load() {
+    function show(v) { state.view = v; fillDates(v); render(); }
+    if (window.__DATA__) { show(window.__DATA__[state.ticker][state.asOf]); return; }
+    getJSON('/api/company/' + encodeURIComponent(state.ticker) +
+      (state.asOf ? '?as_of=' + state.asOf : ''), show);
+  }
+
+  document.getElementById('m-ess').onclick = function () { state.mode = 'ess'; render(); };
+  document.getElementById('m-pro').onclick = function () { state.mode = 'pro'; render(); };
+  document.getElementById('asof').onchange = function () { state.asOf = this.value; load(); };
+  document.getElementById('sheet-close').onclick = closeSheet;
+  document.getElementById('sheet-bg').onclick = function (e) { if (e.target === this) { closeSheet(); } };
+  document.onkeydown = function (e) { if (e.keyCode === 27) { closeSheet(); } };
+
+  function start(list) {
+    if (!list.length) {
+      document.getElementById('name').textContent = 'Aucune société chargée';
+      document.getElementById('sub').textContent = 'Lancez la commande « seed » ou « ingest-sec ».';
+      return;
+    }
+    state.ticker = list[0];
+    load();
+  }
+  if (window.__DATA__) { start(Object.keys(window.__DATA__)); }
+  else { getJSON('/api/companies', function (cs) { start(cs.map(function (c) { return c.ticker; })); }); }
+})();
+</script>
+</body>
+</html>

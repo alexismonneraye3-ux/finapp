@@ -1,0 +1,36 @@
+{
+  "_note": "Prévisions de chiffre d'affaires annoncées par Nvidia pour le trimestre suivant. Les valeurs centrales et la fourchette de plus ou moins 2 % viennent des communiqués et commentaires du directeur financier. La prévision du T4 exercice 2026 est déduite d'un article de presse (dépassement d'environ 3 milliards) et marquée comme telle. Les dates d'annonce sont approximatives.",
+  "guidance": [
+    {
+      "metric": "revenue", "fiscal_label": "T4 exercice 2026", "period_end": "2026-01-25",
+      "mid": 65000000000, "unit": "USD", "stated_at": "2025-11-19", "is_deduced": true,
+      "source_kind": "article",
+      "source_title": "Nvidia T4 2026, article de Fortune",
+      "source_url": "https://fortune.com/2026/02/25/nvidia-nvda-earnings-q4-results-jensen-huang/"
+    },
+    {
+      "metric": "revenue", "fiscal_label": "T1 exercice 2027", "period_end": "2026-04-26",
+      "low": 76440000000, "mid": 78000000000, "high": 79560000000, "unit": "USD",
+      "stated_at": "2026-02-25",
+      "source_kind": "press_release",
+      "source_title": "Nvidia, communiqué T4 exercice 2026 et prévision T1",
+      "source_url": "https://nvidianews.nvidia.com/_gallery/download_pdf/699f6ab43d6332ccaa689907/"
+    },
+    {
+      "metric": "revenue", "fiscal_label": "T2 exercice 2027", "period_end": "2026-07-26",
+      "low": 89180000000, "mid": 91000000000, "high": 92820000000, "unit": "USD",
+      "stated_at": "2026-05-27",
+      "source_kind": "sec_filing",
+      "source_title": "Nvidia, commentaire du directeur financier T1 exercice 2027",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000051/q1fy27cfocommentary.htm"
+    },
+    {
+      "metric": "revenue", "fiscal_label": "T3 exercice 2027", "period_end": "2026-10-25",
+      "low": 105840000000, "mid": 108000000000, "high": 110160000000, "unit": "USD",
+      "stated_at": "2026-08-26",
+      "source_kind": "sec_filing",
+      "source_title": "Nvidia, commentaire du directeur financier T2 exercice 2027",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000073/q2fy27cfocommentary.htm"
+    }
+  ]
+}

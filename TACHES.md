@@ -23,7 +23,7 @@ reprend les phases dans l'ordre du fichier.
 
 1. Fiche lisible : 1.1, 1.2, 1.3, 1.12, 1.14, 1.15
 2. Plusieurs sociétés : 2.1, 2.2, 2.3, 2.4, 2.5
-3. Données réelles : 3.1, 3.2, 3.3, 3.4, 3.8, 3.9, 3.12
+3. Données réelles : 3.14, 3.15, 3.1, 3.2, 3.3, 3.4, 3.8, 3.9, 3.12
 4. Promesses à grande échelle : 4.1, 4.2, 4.5, 4.6, 4.7, 4.8, 4.9
 5. Deux langues : 10.1, 10.2, 10.3
 6. Site public : 12.1, 12.2, 12.3, 12.4, 12.7, 12.8, 12.9
@@ -37,7 +37,7 @@ une tâche en dépend.
 - [ ] D1 — Choisir le nom de l'appli et vérifier la marque.
 - [ ] D2 — Fournir une clé d'accès à un modèle de langage (bloque la phase 9).
 - [ ] D3 — Choisir un fournisseur de cours avec droits d'affichage (bloque les cours réels ; les tâches utilisent un faux fournisseur en attendant).
-- [ ] D4 — Autoriser l'accès réseau à `sec.gov` et `data.sec.gov` dans l'environnement cloud de Claude Code (bloque la collecte réelle ; sans cela l'agent ne travaille que sur des fichiers d'exemple).
+- [x] D4 — Accès réseau à `sec.gov`, `www.sec.gov` et `data.sec.gov` : ouvert le 12 novembre 2026 dans l'environnement cloud « finapp » (à choisir à chaque nouvelle session). La SEC exige une adresse de contact à chaque requête : elle se passe à la commande, elle ne s'écrit jamais dans le dépôt.
 - [ ] D5 — Choisir l'hébergement et le nom de domaine (bloque la phase 14).
 - [ ] D6 — Faire relire par un avocat les formulations de l'IA, les classements et les partenariats courtiers avant tout lancement public.
 - [ ] D7 — Fixer le seuil d'erreur maximal du jeu de questions (valeur de départ proposée : 2 %).
@@ -47,7 +47,6 @@ une tâche en dépend.
 
 Référence : `02-calculs.md`, `03-ecrans.md` section 3.3.
 
-- [ ] 1.2 — Vue annuelle : série annuelle du chiffre d'affaires dans `views.company_view` avec variation sur un an ; affichage en mode Pro. Tests.
 - [ ] 1.3 — Variation sur un an par trimestre (même trimestre de l'exercice précédent) et croissance annuelle moyenne sur n ans dans `calc.py`. Tests des cas limites.
 - [ ] 1.4 — Étendre `sec.TAGS` au compte de résultat complet listé dans `01-donnees.md` section 3, avec jeu d'exemple au format SEC. Tests.
 - [ ] 1.5 — Bilan : indicateurs à une date (`period_type` « instant »), lecture et affichage en mode Pro. Tests.
@@ -93,6 +92,8 @@ Référence : `01-donnees.md` sections 4 à 8.
 - [ ] 3.11 — Affichage des contrôles dans la fiche source et page « Qualité des données » en mode Pro.
 - [ ] 3.12 — Âge des données : calcul et affichage par bloc, seuils « donnée ancienne ». Tests.
 - [ ] 3.13 — Commande de vérification complète de la base (tous les contrôles) avec rapport lisible.
+- [ ] 3.14 — Chiffre republié à l'identique : quand un rapport plus récent rappelle un chiffre déjà connu sans le changer, ne pas en faire une nouvelle version, pour que « connu depuis » reste la date de première publication. Constaté sur les vrais comptes de la SEC pendant la tâche 1.2. Tests.
+- [ ] 3.15 — Libellés de trimestre fiables : le champ « exercice » de la SEC est celui du document déposé, pas celui de la période ; déduire le libellé des dates de la période (comme pour les exercices depuis la tâche 1.2). Tests sur fichier au format SEC.
 
 ## Phase 4 — Mémoire des promesses étendue
 
@@ -261,3 +262,4 @@ Référence : `05-creations.md` sections 4, 5 et 7, `04-ia.md` section 10.
 - [x] Socle : base de faits datés, calculs, mémoire des promesses, API, écran Essentiel/Pro, 25 tests.
 - [x] Vision, spécifications détaillées et plan de tâches complet dans `docs/`.
 - [x] 1.1 — Marges : ajouter au mode Pro la marge brute, la marge opérationnelle et la marge nette par trimestre, calculées par `calc.margin` ; chaque valeur ouvre sa fiche source. Tests.
+- [x] 1.2 — Vue annuelle : série annuelle du chiffre d'affaires dans `views.company_view` avec variation sur un an ; affichage en mode Pro. Tests.

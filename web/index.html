@@ -141,6 +141,18 @@ window.__DATA__ = /*__DATA__*/null;
       ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
     ] };
   }
+  function yearGrowthInfo(f) {
+    var p = f.previous;
+    return { title: 'Variation sur un an, ' + f.fiscal_label, rows: [
+      ['Résultat', pct(f.growth.value)],
+      ['Calcul', f.growth.formula],
+      ['Cet exercice', money(f.value) + (f.is_sample ? ' (exemple)' : '') + ', connu depuis le ' + day(f.known_at)],
+      ['Source de cet exercice', f.source],
+      ['Exercice précédent', money(p.value) + (p.is_sample ? ' (exemple)' : '') + ', du ' + day(p.period_start) + ' au ' + day(p.period_end) + ', connu depuis le ' + day(p.known_at)],
+      ['Source de l\'exercice précédent', p.source],
+      ['Méthode', 'Calculé par du code à partir des deux chiffres publiés, sans IA.']
+    ] };
+  }
   var METRIC_NAMES = { gross_profit: 'Marge brute (montant)', operating_income: 'Résultat opérationnel', net_income: 'Résultat net' };
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
   function marginInfo(m, line) {
@@ -265,6 +277,30 @@ window.__DATA__ = /*__DATA__*/null;
     });
     t1.appendChild(b1);
     main.appendChild(card('Chiffre d\'affaires trimestriel', [el('div', { 'class': 'scroll' }, [t1])], true));
+
+    var ta = el('table', {}, [el('thead', {}, [el('tr', {}, [
+      el('th', { text: 'Exercice' }), el('th', { 'class': 'r', text: 'Chiffre d\'affaires' }),
+      el('th', { 'class': 'r', text: 'Var. sur un an' }), el('th', { text: 'Connu depuis' }),
+      el('th', { text: 'Source' })
+    ])])]);
+    var ba = el('tbody'), annual = v.revenue_annual || [];
+    annual.forEach(function (f) {
+      ba.appendChild(el('tr', {}, [
+        el('td', { text: f.fiscal_label }),
+        el('td', { 'class': 'r' }, [num(money(f.value), factInfo(f, 'Chiffre d\'affaires, ' + f.fiscal_label))]),
+        f.growth ? el('td', { 'class': 'r' }, [num(pct(f.growth.value), yearGrowthInfo(f))])
+                 : el('td', { 'class': 'r muted', text: 'non disponible' }),
+        el('td', { text: day(f.known_at) }),
+        el('td', {}, [el('a', { href: f.source.url, target: '_blank', rel: 'noopener', text: f.source.title })])
+      ]));
+    });
+    ta.appendChild(ba);
+    main.appendChild(card('Chiffre d\'affaires annuel', [
+      annual.length ? el('div', { 'class': 'scroll' }, [ta])
+                    : el('p', { text: 'Aucun chiffre annuel publié dans nos données à cette date.' }),
+      el('p', { 'class': 'note', text: 'Ventes d\'un exercice complet, comparées à celles de l\'exercice précédent. ' +
+        '« Non disponible » : l\'exercice précédent manque dans nos données.' })
+    ], true));
 
     var tm = el('table', {}, [el('thead', {}, [el('tr', {}, [
       el('th', { text: 'Période' }), el('th', { 'class': 'r', text: 'Marge brute' }),

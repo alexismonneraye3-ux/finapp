@@ -37,6 +37,7 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 | `web/index.html` | Écran unique, modes Essentiel et Pro, téléphone et ordinateur |
 | `fixtures/` | Jeu d'exemple Nvidia |
 | `tests/` | 80 tests automatiques |
+| `.github/workflows/tests.yml` | Lance tous les tests sur GitHub à chaque proposition |
 
 ## Les trois règles du socle
 

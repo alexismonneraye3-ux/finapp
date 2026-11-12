@@ -240,7 +240,6 @@ Référence : `08` sections 6 et 7. Dépend de D5.
 
 - [ ] 14.1 — Couche d'accès aux données compatible PostgreSQL et SQLite, mêmes tests sur les deux quand PostgreSQL est disponible.
 - [ ] 14.2 — Séparation des tâches de collecte et du service web ; commande de planification.
-- [ ] 14.3 — Fichier de lancement automatique des tests à chaque proposition (GitHub Actions).
 - [ ] 14.4 — Appli web installable sur l'écran d'accueil du téléphone, lecture hors connexion des dernières fiches consultées.
 - [ ] 14.5 — Guide de mise en ligne pas à pas dans `docs/`, en français simple.
 
@@ -264,3 +263,4 @@ Référence : `05-creations.md` sections 4, 5 et 7, `04-ia.md` section 10.
 - [x] 1.1 — Marges : ajouter au mode Pro la marge brute, la marge opérationnelle et la marge nette par trimestre, calculées par `calc.margin` ; chaque valeur ouvre sa fiche source. Tests.
 - [x] 1.2 — Vue annuelle : série annuelle du chiffre d'affaires dans `views.company_view` avec variation sur un an ; affichage en mode Pro. Tests.
 - [x] 1.3 — Variation sur un an par trimestre (même trimestre de l'exercice précédent) et croissance annuelle moyenne sur n ans dans `calc.py`. Tests des cas limites.
+- [x] 14.3 — Fichier de lancement automatique des tests à chaque proposition (GitHub Actions).

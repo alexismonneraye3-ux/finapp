@@ -56,6 +56,16 @@ correction de la spécification dans la même proposition.
 - Une tâche de TACHES.md par proposition, petite et relisible. Une tâche
   trop grosse se découpe : faire la première partie, ajouter les suivantes
   dans TACHES.md.
+- Fusion sans attendre le propriétaire (décidé par lui le 12 novembre
+  2026) : l'agent fusionne lui-même sa proposition quand les trois
+  conditions sont réunies. Un, tous les tests passent, en local et dans
+  le contrôle automatique de GitHub. Deux, la proposition ne contient
+  aucun point à trancher par le propriétaire. Trois, elle n'enfreint
+  aucune règle de ce fichier. Sinon, il la laisse ouverte, explique
+  pourquoi et passe à la tâche suivante.
+- À la fin de chaque étape de l'ordre de passage de TACHES.md, l'agent
+  écrit au propriétaire un résumé en français simple : ce qui a été
+  fait, les choix prudents à confirmer, les défauts connus.
 - Dans la même proposition, cocher la tâche et la déplacer sous « Fait ».
 - Ne pas traiter les lignes « Décisions du propriétaire » ; les rappeler
   quand une tâche en dépend.

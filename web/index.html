@@ -14,7 +14,27 @@
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--bg); color: var(--ink);
     font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 16px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 16px 16px 84px; }
+  /* Navigation : barre du bas sur téléphone, barre latérale sur ordinateur. */
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; background: var(--card); border-top: 1px solid var(--line); }
+  .nav a { flex: 1 1 0; min-width: 0; min-height: 52px; display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 6px 2px; font-size: 11px; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; }
+  .nav a[aria-current="page"] { color: var(--accent); font-weight: 700; box-shadow: inset 0 3px 0 var(--accent); }
+  .nav a:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+  @media (max-width: 420px) { .nav a { font-size: 10px; } }
+  @media (min-width: 900px) {
+    .nav { top: 0; right: auto; width: 190px; flex-direction: column; justify-content: flex-start; border-top: 0; border-right: 1px solid var(--line); padding-top: 20px; }
+    .nav a { flex: 0 0 auto; justify-content: flex-start; padding: 12px 20px; font-size: 15px; min-height: 44px; }
+    .nav a[aria-current="page"] { box-shadow: inset 3px 0 0 var(--accent); }
+    .wrap { margin-left: 190px; padding-bottom: 16px; }
+  }
+  @media (min-width: 1460px) { .wrap { margin-left: auto; } }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { border-bottom: 1px solid var(--line); }
+  .list li:last-child { border-bottom: 0; }
+  .list a { display: block; padding: 12px 0; min-height: 44px; color: var(--ink); text-decoration: none; }
+  .list a:hover, .list a:focus { background: var(--accent-soft); outline: none; }
+  .list small { display: block; color: var(--muted); }
   header.top { display: flex; flex-wrap: wrap; align-items: flex-end; margin: 8px -8px 16px; }
   header.top > * { margin: 8px; }
   .title { flex: 1 1 240px; min-width: 0; }
@@ -89,16 +109,21 @@
 </style>
 </head>
 <body>
+<nav class="nav" id="nav" aria-label="Navigation principale">
+  <a href="#/" data-screen="accueil">Accueil</a>
+  <a href="#/recherche" data-screen="recherche">Recherche</a>
+  <a href="#/portefeuille" data-screen="portefeuille">Portefeuille</a>
+  <a href="#/investisseurs" data-screen="investisseurs">Investisseurs</a>
+  <a href="#/alertes" data-screen="alertes">Alertes</a>
+  <a href="#/compte" data-screen="compte">Compte</a>
+</nav>
 <div class="wrap">
   <header class="top">
     <div class="title">
-      <h1 id="name">Chargement…</h1>
+      <h1 id="name" tabindex="-1">Chargement…</h1>
       <p id="sub"></p>
     </div>
-    <label class="asof">Société
-      <select id="company"></select>
-    </label>
-    <label class="asof">Vu à la date du
+    <label class="asof" id="asof-box">Vu à la date du
       <select id="asof"></select>
     </label>
     <div class="seg" role="group" aria-label="Niveau de détail">
@@ -126,7 +151,7 @@ window.__DATA__ = /*__DATA__*/null;
 <script>
 (function () {
   var MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  var state = { mode: 'ess', ticker: null, asOf: '', view: null };
+  var state = { mode: 'ess', screen: 'accueil', ticker: null, asOf: '', view: null, companies: [] };
 
   function el(tag, attrs, kids) {
     var n = document.createElement(tag), k;
@@ -621,13 +646,88 @@ window.__DATA__ = /*__DATA__*/null;
     main.appendChild(card('Ruptures d\'habitude', sig));
   }
 
+  /* ---- Navigation par adresse : #/ , #/societe/NVDA , #/societe/NVDA/2026-06-01 ---- */
+  var SCREENS = { recherche: 'Recherche', portefeuille: 'Portefeuille', investisseurs: 'Investisseurs', alertes: 'Alertes', compte: 'Compte' };
+  var TICKER = /^[A-Za-z0-9.\-]{1,12}$/, ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  function parseHash(hash) {
+    var parts = (hash || '').replace(/^#\/?/, '').split('/');
+    if (!parts[0]) { return { screen: 'accueil' }; }
+    if (parts[0] === 'societe' && parts[1] && TICKER.test(parts[1])) {
+      return { screen: 'societe', ticker: parts[1].toUpperCase(),
+        asOf: (parts[2] && ISO_DATE.test(parts[2])) ? parts[2] : '' };
+    }
+    if (SCREENS[parts[0]] && parts.length === 1) { return { screen: parts[0] }; }
+    return { screen: 'inconnu' };
+  }
+  function companyHash(ticker, asOf) { return '#/societe/' + ticker + (asOf ? '/' + asOf : ''); }
+  function setHeader(title, sub, companyTools) {
+    document.getElementById('name').textContent = title;
+    document.getElementById('sub').textContent = sub;
+    document.title = title + ' · finapp';
+    document.getElementById('asof-box').className = 'asof' + (companyTools ? '' : ' hide');
+    document.getElementById('banner').className = 'banner hide';
+  }
+  function markNav(screen) {
+    var links = document.getElementById('nav').getElementsByTagName('a'), i;
+    var current = screen === 'societe' ? 'accueil' : screen;
+    for (i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-screen') === current) { links[i].setAttribute('aria-current', 'page'); }
+      else { links[i].removeAttribute('aria-current'); }
+    }
+  }
+  function message(title, text) {
+    var main = document.getElementById('main');
+    main.innerHTML = '';
+    main.appendChild(card(title, [
+      el('p', { text: text }),
+      el('p', {}, [el('a', { href: '#/', text: 'Revenir à l\'accueil' })])
+    ], true));
+  }
+  function renderHome() {
+    setHeader('Accueil', 'Sociétés disponibles', false);
+    var main = document.getElementById('main');
+    main.innerHTML = '';
+    if (!state.companies.length) {
+      main.appendChild(card('Sociétés', [el('p', { text: 'Aucune société chargée. Lancez la commande « seed » ou « ingest-sec ».' })], true));
+      return;
+    }
+    main.appendChild(card('Sociétés', [el('ul', { 'class': 'list' }, state.companies.map(function (c) {
+      return el('li', {}, [el('a', { href: companyHash(c.ticker, '') }, [c.name, el('small', { text: c.ticker })])]);
+    }))], true));
+  }
+  function route() {
+    var r = parseHash(window.location.hash);
+    closeSheet();
+    state.screen = r.screen;
+    markNav(r.screen);
+    window.scrollTo(0, 0);
+    if (r.screen === 'accueil') { renderHome(); }
+    else if (r.screen === 'societe') {
+      var known = state.companies.some(function (c) { return c.ticker === r.ticker; });
+      if (!known) {
+        setHeader('Société inconnue', r.ticker, false);
+        message('Société inconnue', 'Aucune société ne porte le symbole « ' + r.ticker + ' » dans nos données.');
+        return;
+      }
+      state.ticker = r.ticker;
+      state.asOf = r.asOf;
+      load();
+    } else if (SCREENS[r.screen]) {
+      setHeader(SCREENS[r.screen], '', false);
+      message(SCREENS[r.screen], 'Cet écran n\'existe pas encore. Il arrivera dans une prochaine version.');
+    } else {
+      setHeader('Page introuvable', '', false);
+      message('Page introuvable', 'Cette adresse ne correspond à aucun écran.');
+    }
+  }
+
   function render() {
     var v = state.view, main = document.getElementById('main');
     main.innerHTML = '';
+    setHeader(v.company.name, '', true);
     document.getElementById('name').textContent = v.company.name;
     document.getElementById('sub').textContent = v.company.ticker +
       (state.asOf ? ' · tel que connu le ' + day(state.asOf) : ' · dernières données connues');
-    document.title = v.company.name + ' · Fiche société';
     var banner = document.getElementById('banner');
     if (v.company.is_fictional) {
       banner.textContent = 'Société inventée pour la démonstration : elle n\'existe pas, aucun de ces chiffres n\'est réel et les liens de source ne mènent nulle part.';
@@ -643,13 +743,19 @@ window.__DATA__ = /*__DATA__*/null;
 
   function fillDates(v) {
     var sel = document.getElementById('asof');
-    if (sel.getAttribute('data-ticker') === state.ticker) { return; }
-    sel.setAttribute('data-ticker', state.ticker);
-    sel.innerHTML = '';
-    sel.appendChild(el('option', { value: '', text: 'Aujourd\'hui' }));
-    v.timeline.slice().reverse().forEach(function (d) {
-      sel.appendChild(el('option', { value: d, text: day(d) }));
-    });
+    if (sel.getAttribute('data-ticker') !== state.ticker) {
+      sel.setAttribute('data-ticker', state.ticker);
+      sel.innerHTML = '';
+      sel.appendChild(el('option', { value: '', text: 'Aujourd\'hui' }));
+      v.timeline.slice().reverse().forEach(function (d) {
+        sel.appendChild(el('option', { value: d, text: day(d) }));
+      });
+    }
+    /* Une date d'adresse qui n'est pas dans la liste (lien partagé) est ajoutée telle quelle. */
+    var found = false, i;
+    for (i = 0; i < sel.options.length; i++) { if (sel.options[i].value === state.asOf) { found = true; } }
+    if (!found) { sel.appendChild(el('option', { value: state.asOf, text: day(state.asOf) })); }
+    sel.value = state.asOf;
   }
 
   function getJSON(url, done) {
@@ -667,33 +773,54 @@ window.__DATA__ = /*__DATA__*/null;
   }
 
   function load() {
-    function show(v) { state.view = v; fillDates(v); render(); }
-    if (window.__DATA__) { show(window.__DATA__[state.ticker][state.asOf]); return; }
-    getJSON('/api/company/' + encodeURIComponent(state.ticker) +
-      (state.asOf ? '?as_of=' + state.asOf : ''), show);
+    var ticker = state.ticker, asOf = state.asOf;
+    function show(v) {
+      /* Une réponse arrivée après un changement d'écran est ignorée. */
+      if (state.screen !== 'societe' || state.ticker !== ticker || state.asOf !== asOf) { return; }
+      state.view = v; fillDates(v); render();
+    }
+    if (window.__DATA__) {
+      var snaps = window.__DATA__[ticker], v = snaps[asOf];
+      if (!v) {
+        /* Page autonome : on prend l'instantané le plus récent qui ne dépasse pas la date demandée. */
+        var best = null, d;
+        for (d in snaps) { if (d && d <= asOf && (best === null || d > best)) { best = d; } }
+        if (best === null) {
+          setHeader(snaps[''].company.name, ticker, false);
+          message('Rien à cette date', 'Aucune information n\'était connue sur cette société le ' + day(asOf) + '.');
+          return;
+        }
+        v = snaps[best];
+      }
+      show(v);
+      return;
+    }
+    getJSON('/api/company/' + encodeURIComponent(ticker) + (asOf ? '?as_of=' + asOf : ''), show);
   }
+  /* Le choix Essentiel / Pro est mémorisé sur l'appareil quand c'est possible. */
+  function setMode(mode) {
+    state.mode = mode;
+    try { window.localStorage.setItem('finapp-mode', mode); } catch (e) { /* stockage indisponible */ }
+    if (state.screen === 'societe' && state.view) { render(); }
+    else {
+      document.getElementById('m-ess').setAttribute('aria-pressed', mode === 'ess' ? 'true' : 'false');
+      document.getElementById('m-pro').setAttribute('aria-pressed', mode === 'pro' ? 'true' : 'false');
+    }
+  }
+  try { if (window.localStorage.getItem('finapp-mode') === 'pro') { state.mode = 'pro'; } } catch (e) { /* stockage indisponible */ }
 
-  document.getElementById('m-ess').onclick = function () { state.mode = 'ess'; render(); };
-  document.getElementById('m-pro').onclick = function () { state.mode = 'pro'; render(); };
-  document.getElementById('asof').onchange = function () { state.asOf = this.value; load(); };
+  document.getElementById('m-ess').onclick = function () { setMode('ess'); };
+  document.getElementById('m-pro').onclick = function () { setMode('pro'); };
+  document.getElementById('asof').onchange = function () { window.location.hash = companyHash(state.ticker, this.value); };
   document.getElementById('sheet-close').onclick = closeSheet;
   document.getElementById('sheet-bg').onclick = function (e) { if (e.target === this) { closeSheet(); } };
   document.onkeydown = function (e) { if (e.keyCode === 27) { closeSheet(); } };
 
   function start(companies) {
-    var list = companies.map(function (c) { return c.ticker; });
-    var pick = document.getElementById('company');
-    companies.forEach(function (c) {
-      pick.appendChild(el('option', { value: c.ticker, text: c.name }));
-    });
-    pick.onchange = function () { state.ticker = this.value; state.asOf = ''; load(); };
-    if (!list.length) {
-      document.getElementById('name').textContent = 'Aucune société chargée';
-      document.getElementById('sub').textContent = 'Lancez la commande « seed » ou « ingest-sec ».';
-      return;
-    }
-    state.ticker = list[0];
-    load();
+    state.companies = companies;
+    setMode(state.mode);
+    window.onhashchange = route;
+    route();
   }
   if (window.__DATA__) {
     start(Object.keys(window.__DATA__).map(function (t) {

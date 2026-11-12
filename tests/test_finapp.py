@@ -892,6 +892,45 @@ class InventedSamples(unittest.TestCase):
         self.assertIn("Société inventée pour la démonstration", html)
 
 
+class ScreenPage(unittest.TestCase):
+    """Contrôles sur le fichier de l'écran. Le comportement dans un navigateur
+    (retour arrière, lien direct) est vérifié à la main à chaque proposition :
+    la règle « aucune dépendance » ne permet pas encore de l'automatiser."""
+
+    def setUp(self):
+        with open(os.path.join(api.WEB_DIR, "index.html"), encoding="utf-8") as fh:
+            self.html = fh.read()
+
+    def test_navigation_has_the_six_entries_of_the_specification(self):
+        for label, href in (("Accueil", "#/"), ("Recherche", "#/recherche"),
+                            ("Portefeuille", "#/portefeuille"), ("Investisseurs", "#/investisseurs"),
+                            ("Alertes", "#/alertes"), ("Compte", "#/compte")):
+            self.assertIn('<a href="%s" data-screen=' % href, self.html)
+            self.assertIn(">%s</a>" % label, self.html)
+
+    def test_address_reflects_the_screen(self):
+        self.assertIn("'#/societe/' + ticker", self.html)
+        self.assertIn("window.onhashchange = route", self.html)
+
+    def test_page_stays_self_contained_and_es5(self):
+        self.assertNotIn("<script src", self.html)
+        self.assertNotIn("<link ", self.html)
+        script = self.html[self.html.index("(function () {"):]
+        for modern in ("=>", "let ", "const ", "`", "async ", "fetch("):
+            self.assertNotIn(modern, script, modern)
+
+    def test_not_advice_notice_is_on_the_page(self):
+        self.assertIn("Information, pas conseil en investissement", self.html)
+
+    def test_unbuilt_screens_say_so(self):
+        self.assertIn("Cet écran n\\'existe pas encore", self.html)
+
+    def test_ticker_rule_matches_the_api(self):
+        """Même règle de symbole côté écran et côté serveur."""
+        self.assertIn("[A-Za-z0-9.\\-]{1,12}", self.html)
+        self.assertEqual(api.route(fresh(), "/api/company/" + "A" * 13, {})[0], 404)
+
+
 class MarginCalc(unittest.TestCase):
     """Cas attendus par docs/specifications/02-calculs.md, section 10."""
 

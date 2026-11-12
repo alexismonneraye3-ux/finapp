@@ -20,18 +20,61 @@ def timeline(conn, company_id):
     return [r["d"] for r in rows]
 
 
+# Marges du mode Pro : (clé, nom affiché, indicateur au numérateur).
+# Le dénominateur est toujours le chiffre d'affaires du même trimestre.
+MARGINS = [
+    ("gross", "marge brute", "gross_profit"),
+    ("operating", "marge opérationnelle", "operating_income"),
+    ("net", "marge nette", "net_income"),
+]
+
+
+def margins(conn, company_id, revenue_rows, as_of=None):
+    """Marges par trimestre, une ligne par trimestre de chiffre d'affaires.
+
+    Tous les faits sont lus à la même date as_of. Une marge impossible à
+    calculer a `result` à None et une raison (« non disponible » ou « non
+    significatif ») : jamais de zéro à la place d'une donnée absente.
+    """
+    by_period = {}
+    for key, _name, metric in MARGINS:
+        by_period[key] = {
+            (r["period_start"], r["period_end"]): r
+            for r in facts.series(conn, company_id, metric, as_of)}
+    out = []
+    for rev in revenue_rows:
+        line = {"period_end": rev["period_end"], "fiscal_label": fiscal_label(rev),
+                "revenue": facts.fact_dict(rev)}
+        for key, name, _metric in MARGINS:
+            num = by_period[key].get((rev["period_start"], rev["period_end"]))
+            line[key] = {
+                "name": name,
+                "result": calc.margin(num, rev, name),
+                "reason": calc.margin_reason(num, rev),
+                "numerator": facts.fact_dict(num) if num is not None else None,
+            }
+        out.append(line)
+    return out
+
+
 def company_view(conn, ticker, as_of=None):
     company = facts.get_company(conn, ticker)
     cid = company["id"]
 
     revenue, prev = [], None
-    for row in facts.series(conn, cid, "revenue", as_of):
+    revenue_rows = facts.series(conn, cid, "revenue", as_of)
+    for row in revenue_rows:
         item = facts.fact_dict(row)
         item["fiscal_label"] = fiscal_label(row)
         item["growth"] = (calc.growth(row, prev)
                           if prev is not None and calc.consecutive(prev, row) else None)
         revenue.append(item)
         prev = row
+
+    margin_lines = margins(conn, cid, revenue_rows, as_of)
+    margin_sample = any(
+        line[key]["numerator"] is not None and line[key]["numerator"]["is_sample"]
+        for line in margin_lines for key, _n, _m in MARGINS)
 
     items = promises.evaluate(conn, cid, "revenue", as_of)
     return {
@@ -40,10 +83,11 @@ def company_view(conn, ticker, as_of=None):
         "as_of": as_of,
         "timeline": timeline(conn, cid),
         "revenue": revenue,
+        "margins": margin_lines,
         "promises": {
             "items": items,
             "profile": promises.profile(items),
             "unusual": promises.unusual(items),
         },
-        "has_sample_data": any(f["is_sample"] for f in revenue),
+        "has_sample_data": any(f["is_sample"] for f in revenue) or margin_sample,
     }

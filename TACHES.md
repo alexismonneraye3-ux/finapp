@@ -47,7 +47,6 @@ une tâche en dépend.
 
 Référence : `02-calculs.md`, `03-ecrans.md` section 3.3.
 
-- [ ] 1.1 — Marges : ajouter au mode Pro la marge brute, la marge opérationnelle et la marge nette par trimestre, calculées par `calc.margin` ; chaque valeur ouvre sa fiche source. Tests.
 - [ ] 1.2 — Vue annuelle : série annuelle du chiffre d'affaires dans `views.company_view` avec variation sur un an ; affichage en mode Pro. Tests.
 - [ ] 1.3 — Variation sur un an par trimestre (même trimestre de l'exercice précédent) et croissance annuelle moyenne sur n ans dans `calc.py`. Tests des cas limites.
 - [ ] 1.4 — Étendre `sec.TAGS` au compte de résultat complet listé dans `01-donnees.md` section 3, avec jeu d'exemple au format SEC. Tests.
@@ -261,3 +260,4 @@ Référence : `05-creations.md` sections 4, 5 et 7, `04-ia.md` section 10.
 
 - [x] Socle : base de faits datés, calculs, mémoire des promesses, API, écran Essentiel/Pro, 25 tests.
 - [x] Vision, spécifications détaillées et plan de tâches complet dans `docs/`.
+- [x] 1.1 — Marges : ajouter au mode Pro la marge brute, la marge opérationnelle et la marge nette par trimestre, calculées par `calc.margin` ; chaque valeur ouvre sa fiche source. Tests.

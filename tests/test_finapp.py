@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 
-from finapp import api, calc, db, facts, health, promises, sec, seed, views
+from finapp import api, calc, charts, db, facts, health, promises, sec, seed, views
 from finapp.__main__ import export_demo
 
 
@@ -481,6 +481,120 @@ class HealthInView(unittest.TestCase):
                 html = fh.read()
         self.assertIn("Santé de l\\'entreprise", html)
         self.assertIn('"health"', html)
+
+
+class ChartData(unittest.TestCase):
+    """Données des graphiques (03-ecrans.md, section 4). Chiffres inventés pour le test."""
+
+    @staticmethod
+    def fact(fid, value, unit="USD", sample=False):
+        return {"id": fid, "value": value, "unit": unit, "is_sample": sample}
+
+    def line(self, end, revenue, profit=None, unit="USD"):
+        return {"period_end": end, "fiscal_label": "T", "revenue": self.fact(1, revenue, unit),
+                "net": {"numerator": None if profit is None else self.fact(2, profit, unit)}}
+
+    def test_short_period(self):
+        self.assertEqual(charts.short_period("2026-04-26"), "avr. 2026")
+        self.assertEqual(charts.short_period("2025-12-31"), "déc. 2025")
+
+    def test_nice_step(self):
+        self.assertEqual(charts.nice_step(96), 50)
+        self.assertEqual(charts.nice_step(7), 2)
+        self.assertEqual(charts.nice_step(4), 1)
+        self.assertEqual(charts.nice_step(0), 1)
+
+    def test_axis_covers_values_and_includes_zero(self):
+        a = charts.axis([68.1e9, 96.2e9], "USD")
+        self.assertEqual((a["min"], a["max"]), (0, 100e9))
+        self.assertEqual([t["label"] for t in a["ticks"]], ["0 Md$", "50 Md$", "100 Md$"])
+
+    def test_axis_goes_below_zero_for_losses(self):
+        a = charts.axis([-3e6, 12e6], "USD")
+        self.assertEqual([t["label"] for t in a["ticks"]],
+                         ["−5 M$", "0 M$", "5 M$", "10 M$", "15 M$"])
+        self.assertLessEqual(a["min"], -3e6)
+        self.assertGreaterEqual(a["max"], 12e6)
+
+    def test_axis_scales(self):
+        self.assertEqual(charts.axis([1.7e9], "USD")["ticks"][1]["label"], "0,5 Md$")
+        self.assertEqual(charts.axis([450], "EUR")["ticks"][-1]["label"], "600 €")
+        self.assertEqual(charts.axis([4200], "USD")["ticks"][-1]["label"], "6 k$")
+
+    def test_axis_all_zero_does_not_divide_by_zero(self):
+        a = charts.axis([0, 0], "USD")
+        self.assertLess(a["min"], a["max"])
+
+    def test_every_tick_is_evenly_spaced(self):
+        ticks = [t["value"] for t in charts.axis([-7e9, 23e9], "USD")["ticks"]]
+        steps = set(round(b - a) for a, b in zip(ticks, ticks[1:]))
+        self.assertEqual(len(steps), 1)
+
+    def test_bars_and_line(self):
+        c = charts.revenue_and_profit([self.line("2026-03-31", 200, 40),
+                                       self.line("2026-06-30", 250, -10)])
+        self.assertEqual([(s["key"], s["kind"]) for s in c["series"]],
+                         [("revenue", "bars"), ("net_income", "line")])
+        self.assertEqual([p["label"] for p in c["periods"]], ["mars 2026", "juin 2026"])
+        self.assertEqual([f["value"] for f in c["series"][1]["points"]], [40, -10])
+        self.assertLessEqual(c["axis"]["min"], -10)
+
+    def test_missing_profit_is_a_gap_never_zero(self):
+        c = charts.revenue_and_profit([self.line("2026-03-31", 200, 40),
+                                       self.line("2026-06-30", 250)])
+        self.assertEqual(c["series"][1]["points"][1], None)
+
+    def test_no_profit_at_all_gives_revenue_only(self):
+        c = charts.revenue_and_profit([self.line("2026-03-31", 200)])
+        self.assertEqual([s["key"] for s in c["series"]], ["revenue"])
+
+    def test_nothing_to_draw(self):
+        self.assertIsNone(charts.revenue_and_profit([]))
+
+    def test_mixed_units_are_not_drawn_together(self):
+        lines = [self.line("2026-03-31", 200, 40), self.line("2026-06-30", 250, 50, unit="EUR")]
+        self.assertIsNone(charts.revenue_and_profit(lines))
+
+    def test_keeps_the_last_twelve_quarters(self):
+        lines = [self.line("20%02d-03-31" % y, 100 + y) for y in range(10, 30)]
+        c = charts.revenue_and_profit(lines)
+        self.assertEqual(len(c["periods"]), 12)
+        self.assertEqual(c["periods"][-1]["period_end"], "2029-03-31")
+
+    def test_sample_flag(self):
+        line = self.line("2026-03-31", 200)
+        self.assertFalse(charts.revenue_and_profit([line])["is_sample"])
+        line["revenue"]["is_sample"] = True
+        self.assertTrue(charts.revenue_and_profit([line])["is_sample"])
+
+
+class ChartInView(unittest.TestCase):
+    def setUp(self):
+        self.conn = fresh()
+        seed.seed(self.conn)
+
+    def test_each_point_is_the_published_fact_with_its_source(self):
+        view = views.company_view(self.conn, "NVDA")
+        points = view["chart"]["series"][0]["points"]
+        self.assertEqual([p["id"] for p in points], [f["id"] for f in view["revenue"]])
+        for p in points:
+            self.assertTrue(p["source"]["url"].startswith("https://"))
+            self.assertTrue(p["known_at"])
+
+    def test_as_of_limits_the_chart(self):
+        self.assertEqual(len(views.company_view(self.conn, "NVDA", "2026-06-01")["chart"]["periods"]), 2)
+        self.assertIsNone(views.company_view(self.conn, "NVDA", "2026-01-01")["chart"])
+
+    def test_demo_page_draws_the_chart_and_its_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "demo.html")
+            export_demo(self.conn, out)
+            with open(out, encoding="utf-8") as fh:
+                html = fh.read()
+        self.assertIn('"chart"', html)
+        self.assertIn("drawChart", html)
+        self.assertIn("Voir les mêmes chiffres en tableau", html)
+        self.assertNotIn("<script src", html)
 
 
 class MarginCalc(unittest.TestCase):

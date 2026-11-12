@@ -49,6 +49,22 @@
   .tag.bad { background: #f8dedb; color: var(--bad); }
   .tag.wait { background: #e6ebf2; color: #37506e; }
   .note { font-size: 12px; color: var(--muted); }
+  svg.chart { display: block; width: 100%; height: auto; max-height: 340px; }
+  svg.chart .grid { stroke: var(--line); stroke-width: 1; }
+  svg.chart .zero { stroke: var(--muted); stroke-width: 1; }
+  svg.chart .tick { font-size: 12px; fill: var(--muted); }
+  svg.chart .bars .mark { fill: var(--accent); cursor: pointer; }
+  svg.chart .line .stroke { fill: none; stroke: #b3541e; stroke-width: 2.5; stroke-linejoin: round; }
+  svg.chart .line .dot { fill: #b3541e; stroke: #fff; stroke-width: 1.5; }
+  svg.chart .line .mark { fill: #000; fill-opacity: 0; cursor: pointer; }
+  svg.chart .mark:hover, svg.chart .mark:focus { outline: none; stroke: var(--ink); stroke-width: 2; }
+  svg.chart .line .mark:hover, svg.chart .line .mark:focus { fill-opacity: 0.12; }
+  .legend { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-block; margin-right: 16px; }
+  .legend .key { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; border-radius: 2px; background: var(--accent); }
+  .legend .key.line { height: 3px; vertical-align: 4px; background: #b3541e; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 14px; padding: 6px 0; }
   .health { padding: 10px 0; border-bottom: 1px solid var(--line); }
   .health h3 { margin: 0; font-size: 15px; }
   .health p { margin: 2px 0 0; }
@@ -210,6 +226,108 @@ window.__DATA__ = /*__DATA__*/null;
       el('h3', { text: h.title }), el('p', {}, kids)
     ]);
   }
+  /* Graphique SVG maison. Les séries, l'axe et les graduations viennent du serveur ;
+     ici on ne fait que dessiner. Chaque barre et chaque point ouvre sa source. */
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function svg(tag, attrs, kids) {
+    var n = document.createElementNS(SVG_NS, tag), k;
+    for (k in (attrs || {})) {
+      if (k === 'text') { n.appendChild(document.createTextNode(attrs[k])); }
+      else { n.setAttribute(k, attrs[k]); }
+    }
+    (kids || []).forEach(function (c) { if (c) { n.appendChild(c); } });
+    return n;
+  }
+  function chartMark(shape, fact, title) {
+    var info = factInfo(fact, title);
+    shape.setAttribute('tabindex', '0');
+    shape.setAttribute('role', 'button');
+    shape.setAttribute('aria-label', title + ' : ' + money(fact.value));
+    shape.setAttribute('class', 'mark');
+    shape.onclick = function () { openSheet(info); };
+    shape.onkeydown = function (e) {
+      if (e.keyCode === 13 || e.keyCode === 32) { e.preventDefault(); openSheet(info); }
+    };
+    shape.appendChild(svg('title', { text: title + ' : ' + money(fact.value) }));
+    return shape;
+  }
+  function drawChart(c) {
+    /* Largeur du dessin = largeur disponible, pour que les textes gardent une taille lisible sur téléphone. */
+    var avail = (document.getElementById('main').clientWidth || 640) - 54;
+    var W = Math.max(280, Math.min(720, avail)), H = W < 480 ? 250 : 300, L = 62, R = 30, T = 12, B = 44;
+    var pw = W - L - R, ph = H - T - B, n = c.periods.length, slot = pw / n;
+    var ax = c.axis;
+    function y(v) { return T + ph - (v - ax.min) / (ax.max - ax.min) * ph; }
+    function x(i) { return L + slot * (i + 0.5); }
+    var root = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, 'class': 'chart', role: 'group',
+      'aria-label': c.title + '. Les mêmes chiffres sont dans le tableau sous le graphique.' });
+    ax.ticks.forEach(function (t) {
+      root.appendChild(svg('line', { x1: L, x2: W - R, y1: y(t.value), y2: y(t.value),
+        'class': t.value === 0 ? 'zero' : 'grid' }));
+      root.appendChild(svg('text', { x: L - 8, y: y(t.value) + 4, 'text-anchor': 'end', 'class': 'tick', text: t.label }));
+    });
+    var every = Math.ceil(n / (W < 480 ? 4 : 6));
+    c.periods.forEach(function (p, i) {
+      if ((n - 1 - i) % every !== 0) { return; }
+      root.appendChild(svg('text', { x: x(i), y: H - B + 18, 'text-anchor': 'middle', 'class': 'tick', text: p.label }));
+    });
+    c.series.forEach(function (s) {
+      var path = '', pen = false, marks = [];
+      s.points.forEach(function (f, i) {
+        if (!f) { pen = false; return; }
+        var title = s.name + ', ' + c.periods[i].label, y0 = y(0), yv = y(f.value);
+        if (s.kind === 'bars') {
+          var bw = Math.max(4, slot * 0.62);
+          marks.push(chartMark(svg('rect', { x: x(i) - bw / 2, y: Math.min(y0, yv), width: bw,
+            height: Math.max(1, Math.abs(y0 - yv)), rx: 2 }), f, title));
+        } else {
+          path += (pen ? ' L' : ' M') + x(i).toFixed(1) + ' ' + yv.toFixed(1);
+          pen = true;
+          marks.push(svg('circle', { cx: x(i), cy: yv, r: 4, 'class': 'dot' }));
+          marks.push(chartMark(svg('circle', { cx: x(i), cy: yv, r: Math.min(14, slot / 2) }), f, title));
+        }
+      });
+      var g = svg('g', { 'class': 'serie ' + s.kind });
+      if (path) { g.appendChild(svg('path', { d: path, 'class': 'stroke' })); }
+      marks.forEach(function (m) { g.appendChild(m); });
+      root.appendChild(g);
+    });
+    return root;
+  }
+  function chartTable(c) {
+    var head = [el('th', { text: 'Trimestre finissant en' })];
+    c.series.forEach(function (s) { head.push(el('th', { 'class': 'r', text: s.name })); });
+    var body = el('tbody');
+    c.periods.forEach(function (p, i) {
+      var cells = [el('td', { text: p.label })];
+      c.series.forEach(function (s) {
+        var f = s.points[i];
+        cells.push(f ? el('td', { 'class': 'r' }, [num(money(f.value), factInfo(f, s.name + ', ' + p.label))])
+                     : el('td', { 'class': 'r muted', text: 'non disponible' }));
+      });
+      body.appendChild(el('tr', {}, cells));
+    });
+    return el('details', {}, [
+      el('summary', { text: 'Voir les mêmes chiffres en tableau' }),
+      el('div', { 'class': 'scroll' }, [el('table', {}, [el('thead', {}, [el('tr', {}, head)]), body])])
+    ]);
+  }
+  function chartCard(c) {
+    if (!c) {
+      return card('Ventes et bénéfice dans le temps', [el('p', { text: 'Aucun chiffre publié à cette date.' })], true);
+    }
+    var legend = el('p', { 'class': 'legend' }, c.series.map(function (s) {
+      return el('span', {}, [el('i', { 'class': 'key ' + s.kind }), s.name]);
+    }));
+    var kids = [legend, drawChart(c)];
+    if (c.series.length < 2) {
+      kids.push(el('p', { 'class': 'note', text: 'Le résultat net n\'est pas dans nos données pour ces trimestres : seules les ventes sont tracées.' }));
+    }
+    kids.push(el('p', { 'class': 'note', text: 'Touchez une barre ou un point pour voir le chiffre exact et sa source.' }));
+    kids.push(chartTable(c));
+    return card('Ventes et bénéfice dans le temps', kids, true);
+  }
+
   function promiseInfo(p) {
     var range = (p.low !== null && p.high !== null)
       ? 'de ' + money(p.low) + ' à ' + money(p.high) : 'non précisée';
@@ -290,6 +408,8 @@ window.__DATA__ = /*__DATA__*/null;
       ]));
     }
     main.appendChild(card('Tient-elle ses promesses ?', kids2));
+
+    main.appendChild(chartCard(v.chart));
 
     main.appendChild(card('Santé de l\'entreprise', (v.health || []).map(healthLine).concat([
       el('p', { 'class': 'note', text: 'Cinq repères décrits par du code à partir des chiffres publiés. Ils décrivent, ils ne jugent pas.' })

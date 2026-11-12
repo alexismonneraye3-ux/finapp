@@ -1,6 +1,6 @@
 """Assemble la fiche d'une société à partir des faits, sans rien inventer."""
 
-from . import calc, facts, promises
+from . import calc, facts, health, promises
 
 
 def fiscal_label(row):
@@ -124,6 +124,7 @@ def company_view(conn, ticker, as_of=None):
     revenue_annual = annual_revenue(conn, cid, as_of)
 
     items = promises.evaluate(conn, cid, "revenue", as_of)
+    profile = promises.profile(items)
     return {
         "company": {"ticker": company["ticker"], "name": company["name"],
                     "cik": company["cik"]},
@@ -132,9 +133,10 @@ def company_view(conn, ticker, as_of=None):
         "revenue": revenue,
         "revenue_annual": revenue_annual,
         "margins": margin_lines,
+        "health": health.health(revenue, margin_lines, items, profile),
         "promises": {
             "items": items,
-            "profile": promises.profile(items),
+            "profile": profile,
             "unusual": promises.unusual(items),
         },
         "has_sample_data": (any(f["is_sample"] for f in revenue + revenue_annual)

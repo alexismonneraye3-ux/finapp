@@ -1,6 +1,6 @@
 """Assemble la fiche d'une société à partir des faits, sans rien inventer."""
 
-from . import calc, facts, health, promises
+from . import calc, charts, facts, health, promises
 
 
 def fiscal_label(row):
@@ -133,6 +133,7 @@ def company_view(conn, ticker, as_of=None):
         "revenue": revenue,
         "revenue_annual": revenue_annual,
         "margins": margin_lines,
+        "chart": charts.revenue_and_profit(margin_lines),
         "health": health.health(revenue, margin_lines, items, profile),
         "promises": {
             "items": items,

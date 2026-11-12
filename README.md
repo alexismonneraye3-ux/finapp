@@ -31,13 +31,14 @@ python3 -m finapp ingest-sec --cik 1045810 --ticker NVDA --user-agent "MonAppli 
 | `finapp/facts.py` | Écriture et lecture des faits, lecture « tel que connu à une date » |
 | `finapp/sec.py` | Collecte et lecture des comptes au format SEC companyfacts |
 | `finapp/calc.py` | Variations (sur un trimestre, sur un an), croissance annuelle moyenne, marges, écarts : chaque résultat garde sa formule et ses entrées |
+| `finapp/charts.py` | Données des graphiques : séries, axe et graduations ; l'écran ne fait que dessiner |
 | `finapp/health.py` | Bloc « Santé » du mode Essentiel : cinq indicateurs, une phrase modèle chacun |
 | `finapp/promises.py` | Verdict de chaque prévision, habitude de l'entreprise, ruptures d'habitude |
 | `finapp/views.py` | Assemble la fiche d'une société : chiffre d'affaires par trimestre et par exercice, marges par trimestre, promesses |
 | `finapp/api.py` | API JSON (`/api/companies`, `/api/company/<ticker>?as_of=AAAA-MM-JJ`) et service de l'écran |
 | `web/index.html` | Écran unique, modes Essentiel et Pro, téléphone et ordinateur |
 | `fixtures/` | Jeu d'exemple Nvidia |
-| `tests/` | 103 tests automatiques |
+| `tests/` | 120 tests automatiques |
 | `.github/workflows/tests.yml` | Lance tous les tests sur GitHub à chaque proposition |
 
 ## Les trois règles du socle

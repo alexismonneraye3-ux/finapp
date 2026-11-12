@@ -56,7 +56,6 @@ Référence : `02-calculs.md`, `03-ecrans.md` section 3.3.
 - [ ] 1.10 — Solidité : dette nette, liquidité générale, couverture des intérêts, endettement, avec la règle « non significatif ». Tests.
 - [ ] 1.11 — Trésorerie : flux disponible, marge de flux disponible, conversion du bénéfice. Tests.
 - [ ] 1.13 — Tableaux complets du mode Pro : compte de résultat, bilan, flux, par trimestre et par exercice, dans un cadre qui défile, avec export CSV.
-- [ ] 1.14 — Graphiques SVG maison : courbe et barres pour chiffre d'affaires et bénéfice, valeurs au toucher, tableau équivalent accessible (`03-ecrans.md` section 4).
 - [ ] 1.15 — Fiche source enrichie : formule, entrées, contrôles de qualité, bouton « signaler une erreur » (stockage du signalement, route d'API, tests).
 - [ ] 1.16 — Fiche société : informations d'en-tête (bourse, pays, devise, secteur, fin d'exercice) dans le schéma et à l'écran.
 - [ ] 1.17 — Comparaison de jusqu'à cinq sociétés côte à côte en mode Pro, sur un indicateur et une période. Tests.
@@ -266,3 +265,4 @@ Référence : `05-creations.md` sections 4, 5 et 7, `04-ia.md` section 10.
 - [x] 1.3 — Variation sur un an par trimestre (même trimestre de l'exercice précédent) et croissance annuelle moyenne sur n ans dans `calc.py`. Tests des cas limites.
 - [x] 14.3 — Fichier de lancement automatique des tests à chaque proposition (GitHub Actions).
 - [x] 1.12 — Bloc « Santé » du mode Essentiel : cinq indicateurs (croissance, rentabilité, dette, trésorerie, promesses tenues), chacun avec une phrase modèle produite par du code. Tests des phrases. Fait pour la croissance, la rentabilité et les promesses ; dette et trésorerie affichent « pas encore dans nos données » jusqu'aux tâches 1.19 et 1.20.
+- [x] 1.14 — Graphiques SVG maison : courbe et barres pour chiffre d'affaires et bénéfice, valeurs au toucher, tableau équivalent accessible (`03-ecrans.md` section 4).
